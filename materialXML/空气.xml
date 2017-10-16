@@ -1,0 +1,1 @@
+<material>  <materilId>1</materilId>  <name>空气</name>  <source>空气.xml</source>  <isSelected>false</isSelected>  <density>0.29</density>  <miu>1.0</miu>  <boSongBi>0.0</boSongBi>  <yangShiMoLiang>0.0</yangShiMoLiang>  <tiJiMoLiang>0.0</tiJiMoLiang>  <jianQieMoLiang>0.0</jianQieMoLiang>  <quFuQiangDu>0.0</quFuQiangDu>  <daorexishu>0.0</daorexishu></material>

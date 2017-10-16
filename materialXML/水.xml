@@ -1,0 +1,1 @@
+<material>  <materilId>0</materilId>  <name>水</name>  <source>水.xml</source>  <isSelected>false</isSelected>  <density>1000.0</density>  <miu>0.001</miu>  <boSongBi>0.0</boSongBi>  <yangShiMoLiang>0.0</yangShiMoLiang>  <tiJiMoLiang>0.0</tiJiMoLiang>  <jianQieMoLiang>0.0</jianQieMoLiang>  <quFuQiangDu>0.0</quFuQiangDu>  <daorexishu>0.6</daorexishu></material>
