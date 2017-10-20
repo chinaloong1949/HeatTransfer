@@ -125,7 +125,7 @@ public class MainFrame extends JFrame {
     private int currentPart = 0;//当前正在操作的part索引号
 
     @SuppressWarnings("Convert2Lambda")
-    public MainFrame(SetInfo setInfo, int width, int height) {
+    public MainFrame(SetInfo setInfo, int xLocation, int yLocation, int width, int height) {
 
         this.setInfo = setInfo;
         if (setInfo == null) {
@@ -176,8 +176,10 @@ public class MainFrame extends JFrame {
         JMenuItem setItem2 = new JMenuItem("插入边界条件……");
         JMenuItem setItem3 = new JMenuItem("开始求解");
         JMenuItem setItem4 = new JMenuItem("命令窗口");
+        JMenuItem setItem8 = new JMenuItem("流动换热分析");
         JMenuItem setItem5 = new JMenuItem("Solid2D求解");
-        JMenuItem setItem6 = new JMenuItem("温度场计算");
+        JMenuItem setItem6 = new JMenuItem("固体温度场计算");
+        JMenuItem setItem7 = new JMenuItem("结构参数优化");
 
         operateMenu.add(setItem0);
         operateMenu.add(setItem1);
@@ -189,7 +191,9 @@ public class MainFrame extends JFrame {
         operateMenu.addSeparator();
         operateMenu.add(setItem5);
         operateMenu.addSeparator();
+        operateMenu.add(setItem8);
         operateMenu.add(setItem6);
+        operateMenu.add(setItem7);
 
         JMenuItem searchMenu0 = new JMenuItem("设计变量取值建议范围列表");
         searchMenu.add(searchMenu0);
@@ -262,6 +266,7 @@ public class MainFrame extends JFrame {
                 screenSize.setSize(screenSize.getWidth(), 768);
             }
         }
+        this.setLocation(xLocation, yLocation);
         this.setSize(screenSize);
 
         this.setVisible(true);
@@ -382,6 +387,20 @@ public class MainFrame extends JFrame {
             @Override
             public void actionPerformed(ActionEvent e) {
                 calculate(2, null);//温度场计算
+            }
+        });
+
+        setItem7.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                changePanel(20, null);
+            }
+        });
+
+        setItem8.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                changePanel(-1, null);
             }
         });
 
@@ -799,19 +818,32 @@ public class MainFrame extends JFrame {
         treeModel.insertNodeInto(childNode, parentNode, 0);
     }
 
-    private void changePanel(int tab, Object object) {
+    public void changePanel(int tab, Object object) {
 
         switch (tab) {
 
             default:
-                contentPanel.remove(rightPanel);
-                rightPanel = getContentPanel(tab, object);
-                contentPanel.add(rightPanel);
-                contentPanel.revalidate();//不加此条语句，则
-                //只有在第二次单机时才会更新rightPanel
-                leftBottomPanel.removeAll();
-                leftBottomPanel.add(getleftBottomPanel(tab, object), BorderLayout.CENTER);
-                leftBottomPanel.revalidate();
+                if (tab == -1) {//表示从其他模块切回流场计算模块
+                    new MainFrame(null, this.getX(), this.getY(),
+                            this.getWidth(), this.getHeight());
+                    this.dispose();
+                } else if (tab <= 19) {
+                    contentPanel.remove(rightPanel);
+                    rightPanel = getContentPanel(tab, object);
+                    contentPanel.add(rightPanel);
+                    contentPanel.revalidate();//不加此条语句，则
+                    //只有在第二次单机时才会更新rightPanel
+
+                    leftBottomPanel.removeAll();
+                    leftBottomPanel.add(getleftBottomPanel(tab, object), BorderLayout.CENTER);
+                    leftPanel.revalidate();
+
+                } else {
+                    centerPanel.removeAll();
+                    centerPanel.add(getContentPanel(tab, object), BorderLayout.CENTER);
+                    centerPanel.revalidate();
+                }
+
                 break;
         }
     }
@@ -1682,6 +1714,38 @@ public class MainFrame extends JFrame {
                 break;
             case 19:
                 break;
+            case 20://结构优化
+                JPanel jPanel20_0 = new JPanel(new BorderLayout());
+                JPanel jPanel20_1 = new JPanel(new BorderLayout());
+                JPanel jPanel20_2 = new JPanel(new BorderLayout());
+//                JPanel jPanel20_3 = new JPanel();
+//
+//                JLabel jLabel20_0 = new JLabel("几何模型设置");
+//                JLabel JLabel20_1 = new JLabel("选择模型保存文件夹");
+//                JButton jButton20_0 = new JButton("打开");
+//                JButton jButton20_1 = new JButton("编辑SolidWorks模型创建宏文件");
+//                JButton jButton20_2 = new JButton("编辑几何模型尺寸参数");
+//
+//                jPanel20_3.setLayout(new GridBagLayout());//第一个tabbedPane中的容器面板
+//                JPanel jPanel20_4 = new JPanel();
+//                jPanel20_4.setBackground(Color.red);
+//                JPanel jPanel20_5 = new JPanel();
+//                jPanel20_5.setBackground(Color.yellow);
+//
+//                JPanel jPanel20_6 = new JPanel();
+//                jPanel20_6.setBackground(Color.blue);
+//                jPanel20_3.add(jPanel20_4,
+//                        new GBC(0, 0, 82, 1).setFill(GBC.BOTH).setIpad(70, 90));
+//                jPanel20_3.add(jPanel20_5,
+//                        new GBC(82, 0, 6, 1).setFill(GBC.BOTH));
+//                jPanel20_3.add(jPanel20_6,
+//                        new GBC(88, 0, 6, 1).setFill(GBC.BOTH));
+//                jPanel20_3.add(jPanel20_5,
+//                        new GBC(94, 0, 6, 100).setFill(GBC.BOTH));
+//                jPanel20_0.add(jPanel20_3);
+                new Optimization(this.getX(), this.getY(), this.getWidth(), this.getHeight());
+                this.dispose();
+                break;
             default:
                 break;
 
@@ -1718,6 +1782,10 @@ public class MainFrame extends JFrame {
         materialArr = materialFrame.getMaterials();
         info.setMaterialArr(materialArr);
         System.out.println("节点信息打包...");
+        if (node == null) {
+            JOptionPane.showMessageDialog(null, "没有网格信息！");
+            return;
+        }
         info.setNode(node);
         System.out.println("节点信息打包完成");
         info.setParts(parts);
@@ -1793,7 +1861,7 @@ public class MainFrame extends JFrame {
             SetInfo setInfo = XStreamUtil.SetInfoFromXML(inxml);
             int width = this.getWidth();
             int height = this.getHeight();
-            new MainFrame(setInfo, width, height);
+            new MainFrame(setInfo, this.getX(), this.getY(), width, height);
             this.dispose();
         } catch (FileNotFoundException ex) {
             Logger.getLogger(MainFrame.class.getName()).

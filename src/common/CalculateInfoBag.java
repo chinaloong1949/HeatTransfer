@@ -848,7 +848,7 @@ public class CalculateInfoBag {
 
     private ArrayList<BoundaryPEle> transPressBoundary(Boundary object) {
         //根据Boundary生成BoundaryPEle
-        ArrayList<BoundaryPEle> boundaryPressure = new ArrayList<>();        
+        ArrayList<BoundaryPEle> boundaryPressure = new ArrayList<>();
         int dataSetId = object.getNodeSetId();
         double value = object.getValue();
 
@@ -884,7 +884,7 @@ public class CalculateInfoBag {
                 } else if (eleNodeList[7] == nodeSet[j]) {
                     index.add(7);
                 }
-                
+
             }
             if (index.size() >= 4) {
                 if (index.contains(0) && index.contains(3) && index.contains(7)

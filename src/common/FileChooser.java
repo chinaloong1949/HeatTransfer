@@ -8,52 +8,124 @@
 package common;
 
 import java.io.File;
-import java.util.Arrays;
 import javax.swing.JFileChooser;
-import javax.swing.JFrame;
-import javax.swing.filechooser.FileFilter;
+import javax.swing.JOptionPane;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
 /**
  *
  * @author Administrator
  */
-public class FileChooser extends JFrame {
+public class FileChooser extends JFileChooser {
 
+    public static final int SELECT_FILE_ONLY = 1;
+    public static final int SELECT_MULTI_FILES = 5;
+    public static final int SELECT_DIRECTORY = 3;
+    public static final int SAVE_TO_FILE = 2;
     File file = null;
-    String title = "设置保存文件路径名称";
+    String title = "";
     String fileType[] = null;
     private String defaultFileName = "default.txt";
-    private String defaultFilePath = "C:";
+    private int tab = 1;
 
+    /**
+     *
+     * @param title 标题
+     * @param tab
+     * 标记FileChooser的类型是用于打开文件还是保存文件等，可以取的值有FileChooser.SELECT_FILE_ONLY,
+     * FileChooser.SELECT_DIRECTORY和FileChooser.SAVE_FILE
+     * @param fileType 过滤指定后缀名的文件，如String[] fileType={"jpg","png"}会
+     * 过滤出*.jpg和*.png的文件在文件选择窗口中
+     * @param defaultFileName
+     * 默认选择的文件名称，相对路径，默认值为"default.txt",仅tab==FileChooser.SAVE_FILE时有效
+     */
     public FileChooser(String title, int tab, String[] fileType, String defaultFileName) {
-        this.title = title;
+        super.setDialogTitle(title);
+        this.title = title;//这句用来标记title是否被调用者修改
         this.fileType = fileType;
         this.defaultFileName = defaultFileName;
-        this.file = init(tab);
+        this.tab = tab;
     }
 
+    /**
+     *
+     * @param tab
+     * 标记FileChooser的类型是用于打开文件还是保存文件等，可以取的值有FileChooser.SELECT_FILE_ONLY,
+     * FileChooser.SELECT_DIRECTORY和FileChooser.SAVE_FILE
+     */
+    public FileChooser(int tab) {
+        this.tab = tab;
+    }
+
+    /**
+     *
+     * @param tab
+     * 标记FileChooser的类型是用于打开文件还是保存文件等，可以取的值有FileChooser.SELECT_FILE_ONLY,
+     * FileChooser.SELECT_DIRECTORY和FileChooser.SAVE_FILE
+     * @param defaultFilePath FileChooser打开时所在的默认路径
+     */
+    public FileChooser(int tab, String defaultFilePath) {
+        super(defaultFilePath);
+        this.tab = tab;
+    }
+
+    /**
+     * FileChooser继承自JFileChooser
+     *
+     * @param title FileChooser的标题
+     * @param tab
+     * 标记FileChooser的类型是用于打开文件还是保存文件等，可以取的值有FileChooser.SELECT_FILE_ONLY,
+     * FileChooser.SELECT_DIRECTORY和FileChooser.SAVE_FILE
+     */
     public FileChooser(String title, int tab) {
-        this.title = title;
-        this.file = init(tab);
+        super(new File("C:"));//设置默认路径
+        this.title = title;//这句用来标记title是否被调用者修改
+        super.setDialogTitle(title);
+        this.tab = tab;
     }
 
+    /**
+     *
+     * @param title 对话框的标题
+     * @param tab 可以取的值有FileChooser.SELECT_FILE_ONLY,
+     * FileChooser.SELECT_DIRECTORY和FileChooser.SAVE_FILE
+     * @param defaultFilePath 对话框默认的路径
+     */
     public FileChooser(String title, int tab, String defaultFilePath) {
-        this.defaultFilePath = defaultFilePath;
-        this.title = title;
-        this.file = init(tab);
+        super(defaultFilePath);
+        super.setDialogTitle(title);
+        this.title = title;//这句用来标记title是否被调用者修改
+        this.tab = tab;
     }
 
+    /**
+     *
+     * @param title FileChooser的标题
+     * @param tab
+     * 标记FileChooser的类型是用于打开文件还是保存文件等，可以取的值有FileChooser.SELECT_FILE_ONLY,
+     * FileChooser.SELECT_DIRECTORY和FileChooser.SAVE_FILE
+     * @param fileType 过滤指定后缀名的文件，如String[] fileType={"jpg","png"}会
+     * 过滤出*.jpg和*.png的文件在文件选择窗口中
+     */
     public FileChooser(String title, int tab, String[] fileType) {
-        this.title = title;
+        super.setDialogTitle(title);
+        this.title = title;//这句用来标记title是否被调用者修改
         this.fileType = fileType;
-        this.file = init(tab);
+        this.tab = tab;
     }
 
+    /**
+     *
+     * @param tab
+     * 标记FileChooser的类型是用于打开文件还是保存文件等，可以取的值有FileChooser.SELECT_FILE_ONLY,
+     * FileChooser.SELECT_DIRECTORY和FileChooser.SAVE_FILE
+     * @param fileType 过滤指定后缀名的文件，如String[] fileType={"jpg","png"}会
+     * 过滤出*.jpg和*.png的文件在文件选择窗口中
+     */
     public FileChooser(int tab, String[] fileType) {
 
         this.fileType = fileType;
-        this.file = init(tab);
+        this.tab = tab;
     }
 
     private File init(int tab) {
@@ -66,117 +138,72 @@ public class FileChooser extends JFrame {
 
         switch (tab) {
             case 1:
-                JFileChooser fc1 = new JFileChooser(defaultFilePath);
-                if (fileType != null) {
-                    fc1.setAcceptAllFileFilterUsed(false);
-                    fc1.addChoosableFileFilter(new FileFilter() {
-                        @Override
-                        public boolean accept(File f) {
-                            if (f.isDirectory()) {
-                                return true;
-                            }
-                            String fileName = f.getName();
-                            int index = fileName.lastIndexOf('.');
-                            if (index > 0 && index < fileName.length() - 1) {
-                                String extension = fileName.substring(index + 1).toLowerCase();
-                                /*if (extension.equals("csv") || extension.equals("CSV")
-                                 || extension.equals("txt") || extension.equals("TXT")
-                                 || extension.equals("dat") || extension.equals("DAT")) {
-                                 return true;
-                                 }*/
-                                if (Arrays.asList(fileType).contains(extension)) {
-                                    //判断extension是否在fileType数组中
-                                    return true;
-                                }
-                            }
-                            return false;
-                        }
-
-                        @Override
-                        public String getDescription() {
-                            return getDescription_1(fileType);
-                        }
-                    }
-                    );
+                if (this.title.equals("")) {
+                    this.title = "打开文件";
                 }
-                int openResult1 = fc1.showOpenDialog(null);
+                if (fileType != null) {
+                    this.setAcceptAllFileFilterUsed(false);
+                    this.addChoosableFileFilter(new FileNameExtensionFilter(
+                            getDescription_1(fileType), fileType));
+                }
+                int openResult1 = this.showOpenDialog(null);
                 if (openResult1 == JFileChooser.APPROVE_OPTION) {
-                    file1 = fc1.getSelectedFile();
-                    System.out.println("58FileChooser:file1=" + file1);
+                    file1 = this.getSelectedFile();
+                    if (!file1.exists()) {
+                        JOptionPane.showMessageDialog(null, "您选择的文件不存在，请确认后重试！");
+                    }
+                    System.out.println("105FileChooser:file1=" + file1);
                 }
                 break;
             case 2:
-                JFileChooser fc2 = new JFileChooser(defaultFilePath);
-                fc2.setDialogTitle(title);
-                fc2.setSelectedFile(new File(defaultFileName));
-                if (fileType != null) {
-                    fc2.setAcceptAllFileFilterUsed(false);
-                    fc2.setFileFilter(new FileNameExtensionFilter(getDescription_1(fileType), fileType));
+                if (title.equals("")) {
+                    this.title = "保存为";
                 }
-                int openResult2 = fc2.showSaveDialog(null);
+                this.setDialogTitle(title);
+                this.setSelectedFile(new File(defaultFileName));
+                if (fileType != null) {
+                    this.setAcceptAllFileFilterUsed(true);
+                    this.setFileFilter(new FileNameExtensionFilter(getDescription_1(fileType), fileType));
+                }
+                int openResult2 = this.showSaveDialog(null);
                 if (openResult2 == JFileChooser.APPROVE_OPTION) {
-                    file1 = fc2.getSelectedFile();
+                    file1 = this.getSelectedFile();
                 }
                 break;
             case 3:
-                JFileChooser fc3 = new JFileChooser(defaultFilePath);
-                fc3.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+                if (this.title.equals("")) {
+                    this.title = "请选择文件夹";
+                }
+                this.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
                 try {
-                    int openResult3 = fc3.showOpenDialog(null);
+                    int openResult3 = this.showOpenDialog(null);
                     if (openResult3 == JFileChooser.APPROVE_OPTION) {
-                        file1 = fc3.getSelectedFile();
+                        file1 = this.getSelectedFile();
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
+                System.out.println("file=" + file1);
                 break;
 
             case 4:
 
                 break;
             case 5:
-                JFileChooser fc5 = new JFileChooser(defaultFilePath);
-                fc5.setMultiSelectionEnabled(true);
+                this.setMultiSelectionEnabled(true);
                 if (fileType != null) {
-                    fc5.setAcceptAllFileFilterUsed(false);
-                    fc5.addChoosableFileFilter(new FileFilter() {
-                        @Override
-                        public boolean accept(File f) {
-                            if (f.isDirectory()) {
-                                return true;
-                            }
-                            String fileName = f.getName();
-                            int index = fileName.lastIndexOf('.');
-                            if (index > 0 && index < fileName.length() - 1) {
-                                String extension = fileName.substring(index + 1).toLowerCase();
-                                /*if (extension.equals("csv") || extension.equals("CSV")
-                                 || extension.equals("txt") || extension.equals("TXT")
-                                 || extension.equals("dat") || extension.equals("DAT")) {
-                                 return true;
-                                 }*/
-                                if (Arrays.asList(fileType).contains(extension)) {
-                                    //判断extension是否在fileType数组中
-                                    return true;
-                                }
-                            }
-                            return false;
-                        }
-
-                        @Override
-                        public String getDescription() {
-                            return getDescription_1(fileType);
-                        }
-                    }
-                    );
+                    this.setAcceptAllFileFilterUsed(false);
+                    this.addChoosableFileFilter(new FileNameExtensionFilter(
+                            getDescription_1(fileType), fileType));
                 }
-                int openResult5 = fc5.showOpenDialog(null);
+                int openResult5 = this.showOpenDialog(null);
                 if (openResult5 == JFileChooser.APPROVE_OPTION) {
-                    file1 = fc5.getSelectedFile();
-                    System.out.println("58FileChooser:file1=" + file1);
+                    file1 = this.getSelectedFile();
+                    System.out.println("147FileChooser:file1=" + file1);
                 }
                 break;
             default:
-                System.out.println("文件选择器出错，错误的tab指示值！");
+                System.out.println("151FileChooser:文件选择器出错，错误的tab指示值！");
         }
         return file1;
     }
@@ -185,7 +212,7 @@ public class FileChooser extends JFrame {
         //通过过滤类型数组获得描述字符串
         String description = "";
         for (String s : fileType) {
-            description = description + "*." + s;
+            description = description + "*." + s + "; ";
         }
         return description;
     }
@@ -198,7 +225,12 @@ public class FileChooser extends JFrame {
         this.fileType = fileType;
     }
 
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
     public File getFile() {
+        init(this.tab);
         return file;
     }
 

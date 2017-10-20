@@ -58,7 +58,8 @@ public class SOFT1 {
                 } catch (Exception e) {
 
                 }
-                new MainFrame(null, 0, 0);
+//                new MainFrame(null, 0, 0, 0, 0);
+                new Optimization(0, 0, 1000, 800);
             }
         });
 
