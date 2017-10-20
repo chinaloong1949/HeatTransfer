@@ -230,7 +230,7 @@ public class FileChooser extends JFileChooser {
     }
 
     public File getFile() {
-        init(this.tab);
+        file = init(this.tab);
         return file;
     }
 

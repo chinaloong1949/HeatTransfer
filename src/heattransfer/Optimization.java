@@ -7,6 +7,7 @@ package heattransfer;
 
 import GUI.GBC;
 import common.FileChooser;
+import common.OptimizationData;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Font;
@@ -14,6 +15,11 @@ import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.io.File;
 import javax.swing.JButton;
 import javax.swing.JFrame;
@@ -23,6 +29,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
+import javax.swing.table.DefaultTableModel;
 
 /**
  *
@@ -31,7 +38,9 @@ import javax.swing.JTextField;
 public class Optimization extends JFrame {
 
     JPanel contentPanel = new JPanel();
+    File modelFolder;
     File meshFolder;
+    OptimizationData data = new OptimizationData();
 
     public Optimization(int x, int y, int width, int height) {
 
@@ -96,6 +105,9 @@ public class Optimization extends JFrame {
                 JButton jButtonFir_1_11 = new JButton("打开");
                 JButton jButtonFir_1_12 = new JButton("关闭");
 
+                Object[] title = {"模型参数", "数值", "单位"};
+                addRow(0, jTableFir_1_0, 0, title);
+
                 editPanel1.add(jLabelFir_1_0, new GBC(0, 0).setIpad(80, 10).setWeight(100, 0));//模型设置
                 editPanel1.add(jLabelFir_1_1, new GBC(0, 1).setIpad(80, 10).setWeight(100, 0));//选择模型存储文件夹
                 editPanel1.add(jTextFieldFir_1_1, new GBC(0, 2, 3, 1).setIpad(60, 10).setWeight(100, 0));
@@ -153,8 +165,40 @@ public class Optimization extends JFrame {
                 jButtonFir_1_10.addActionListener(new ActionListener() {
                     @Override
                     public void actionPerformed(ActionEvent e) {
-                        meshFolder = new FileChooser("选择保存模型文件夹", 1).getFile();
+                        FileChooser fc = new FileChooser("选择保存模型文件夹", FileChooser.SELECT_DIRECTORY, "D:\\Users\\2017\\dissertation\\chapter3\\AoCao\\mesh");
+                        modelFolder = fc.getFile();
+                        System.out.println("modelFolder=" + modelFolder.getAbsolutePath());
+                        if (modelFolder.equals(null)) {
+                            modelFolder = new File("C:");
+                        }
+                        jTextFieldFir_1_1.setText(modelFolder.getAbsolutePath());
+                        if (!modelFolder.exists()) {
+                            modelFolder.mkdirs();
+                        }
                     }
+                });
+                jTableFir_1_0.addMouseListener(new MouseAdapter() {
+                    @Override
+                    public void mouseClicked(MouseEvent e) {
+                        //表格三的鼠标事件处理
+                        if (e.getButton() == MouseEvent.BUTTON3) {
+
+                        } else if (e.getButton() == MouseEvent.BUTTON1) {
+                            int row = jTableFir_1_0.getSelectedRow();
+                            int column = jTableFir_1_0.getSelectedColumn();
+                            dealClickOnCell(3, jTableFir_1_0, row, column);
+                        } else {
+                        }
+                    }
+                });
+                jTableFir_1_0.addKeyListener(new KeyAdapter() {
+                    @Override
+                    public void keyTyped(KeyEvent e) {
+                        if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                            updateTable(1, jTableFir_1_0);
+                        }
+                    }
+
                 });
                 break;
             case 2:
@@ -395,6 +439,80 @@ public class Optimization extends JFrame {
 //        this.getContentPane().removeAll();
 //        this.getContentPane().add(getGridBagPanes(tab, object));
         this.revalidate();
+    }
+
+    private void dealClickOnCell(int tab, JTable table, int rowNum, int colNum) {
+        if (tab == 1) {//点击的是模型面板中的表格
+            if (table.getSelectedRow() == rowNum) {
+
+            }
+        }
+    }
+
+    private void updateTable(int tab, JTable table) {
+        int editingRow = table.getEditingRow();
+        int rowCount = table.getRowCount();
+        System.out.println("" + editingRow);
+        System.out.println("" + rowCount);
+        if (editingRow == rowCount) {
+            DefaultTableModel dtm = (DefaultTableModel) table.getModel();
+            Object[] nullRow = new Object[1];
+            nullRow[0] = "";
+            dtm.addRow(nullRow);
+        }
+    }
+
+    /**
+     *
+     * @param tab tab==0表示每次写入一行保证table后有一个空行
+     * @param table 写入的table变量名
+     * @param rowNum 写入的数据所在行号 写入的数据
+     */
+    private void addRow(int tab, JTable table, int rowNum, Object[] data) {
+        //tab==0表示每次写入数据后保证table后有一个空行
+
+        if (tab == 0 || tab == 1) {
+            //纯文本表格添加方式
+            if (table.getRowCount() > rowNum) {
+                for (int i = 0; i <= data.length - 1; i++) {
+                    table.setValueAt(data[i], rowNum, i);
+                }
+                if (tab == 0) {
+                    DefaultTableModel dtm = (DefaultTableModel) table.getModel();
+                    Object[] nullRow = new Object[1];
+                    nullRow[0] = "";
+                    dtm.addRow(nullRow);
+                }
+            } else {
+                DefaultTableModel dtm = (DefaultTableModel) table.getModel();
+                Object[] nullRow = new Object[1];
+                nullRow[0] = "";
+                dtm.addRow(nullRow);
+                addRow(tab, table, rowNum, data);
+            }
+        } else if (tab == 2 || tab == 3) {
+            //针对table1的设置
+            if (table.getRowCount() > rowNum) {
+                for (int i = 0; i <= data.length - 1; i++) {
+                    if (i != 6) {
+                        table.setValueAt(data[i], rowNum, i);
+                    }
+                }
+                if (tab == 2) {
+                    DefaultTableModel dtm = (DefaultTableModel) table.getModel();
+                    Object[] nullRow = new Object[1];
+                    nullRow[0] = "";
+                    dtm.addRow(nullRow);
+                }
+            } else {
+                DefaultTableModel dtm = (DefaultTableModel) table.getModel();
+                Object[] nullRow = new Object[1];
+                nullRow[0] = "";
+                dtm.addRow(nullRow);
+                addRow(tab, table, rowNum, data);
+            }
+        }
+
     }
 
 }

@@ -725,6 +725,13 @@ public class MaterialFrame extends JPanel {
         return material;
     }
 
+    /**
+     * 
+     * @param tab   tab==0表示每次写入一行保证table后有一个空行
+     * @param table 写入的table变量名
+     * @param rowNum    写入的数据所在的行号
+     * @param data 写入的数据
+     */
     private void addRow(int tab, JTable table, int rowNum, Object[] data) {
         //tab==0表示每次写入数据后保证table后有一个空行
 
