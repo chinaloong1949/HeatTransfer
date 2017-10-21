@@ -59,7 +59,7 @@ public class SOFT1 {
 
                 }
 //                new MainFrame(null, 0, 0, 0, 0);
-                new Optimization(0, 0, 1000, 800);
+                new Optimization(0, 0, 1300, 800);
             }
         });
 

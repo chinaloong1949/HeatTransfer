@@ -17,13 +17,18 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
+import java.io.IOException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
@@ -38,17 +43,30 @@ import javax.swing.table.DefaultTableModel;
 public class Optimization extends JFrame {
 
     JPanel contentPanel = new JPanel();
+    File workingDirectory = new File("D:\\Users\\2017\\dissertation\\chapter3\\AoCao");
     File modelFolder;
+    File createModelFile;
     File meshFolder;
+
     OptimizationData data = new OptimizationData();
 
     public Optimization(int x, int y, int width, int height) {
 
+        this.setLayout(new BorderLayout());
+        JMenuBar menuBar = new JMenuBar();
+
+        JMenu fileMenu = new JMenu("文件");
+
+        JMenuItem chooseWorkingDirectoryMenuItem = new JMenuItem("设置工作目录");
+        fileMenu.add(chooseWorkingDirectoryMenuItem);
+        menuBar.add(fileMenu);
+
 //        this.getContentPane().add(getGridBagPanes(2, null));
         contentPanel.setLayout(new BorderLayout());//一定要加布局管理器，不然出错，JPanel添加布局管理器之后类似于JFrame的getContentPane()
         contentPanel.add(getGridBagPanes(1, null));
-        this.getContentPane().add(contentPanel);
-        this.setTitle("GridBagLayoutTest");
+        this.getContentPane().add(menuBar, BorderLayout.NORTH);
+        this.getContentPane().add(contentPanel, BorderLayout.CENTER);
+        this.setTitle("流动换热优化-v0.1-2017");
         this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         this.setLocation(x, y);
         this.setSize(width, height);
@@ -56,6 +74,14 @@ public class Optimization extends JFrame {
         //this.pack();
         this.setVisible(true);
 
+        chooseWorkingDirectoryMenuItem.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                FileChooser fc = new FileChooser("设置工作目录", FileChooser.SELECT_DIRECTORY, "C:");
+                workingDirectory = fc.getFile();
+                changePanel(1, null);
+            }
+        });
     }
 
     public JPanel getGridBagPanes(int tab, Object object) {
@@ -94,16 +120,19 @@ public class Optimization extends JFrame {
                 JLabel jLabelFir_1_0 = new JLabel("模型设置");
                 jLabelFir_1_0.setFont(new Font("楷体", Font.BOLD, 20));
                 JLabel jLabelFir_1_1 = new JLabel("选择模型存储文件夹：");
-                JTextField jTextFieldFir_1_1 = new JTextField("C:\\mesh");
+                JTextField jTextFieldFir_1_1;
+                jTextFieldFir_1_1 = new JTextField(new File(workingDirectory, "mesh").getAbsolutePath());
+
                 JButton jButtonFir_1_10 = new JButton("打开");
                 JLabel jLabelFir_1_2 = new JLabel("模型控制参数：");
                 JTable jTableFir_1_0 = new JTable(1, 3);
                 JLabel jLabelFir_1_3 = new JLabel("建模文件编辑：");
+                JLabel jLabelFir_1_4 = new JLabel("");
                 JTextArea jTextAreaFir_1 = new JTextArea();
                 JScrollPane jScrollPaneFir1 = new JScrollPane(jTextAreaFir_1);
 
                 JButton jButtonFir_1_11 = new JButton("打开");
-                JButton jButtonFir_1_12 = new JButton("关闭");
+                JButton jButtonFir_1_12 = new JButton("新建");
 
                 Object[] title = {"模型参数", "数值", "单位"};
                 addRow(0, jTableFir_1_0, 0, title);
@@ -114,10 +143,11 @@ public class Optimization extends JFrame {
                 editPanel1.add(jButtonFir_1_10, new GBC(3, 2).setIpad(20, 10).setWeight(0, 0));
                 editPanel1.add(jLabelFir_1_2, new GBC(0, 3).setIpad(80, 10).setWeight(100, 0));//模型控制参数
                 editPanel1.add(jTableFir_1_0, new GBC(0, 4, 4, 1).setIpad(80, 30).setWeight(100, 0));
-                editPanel1.add(jLabelFir_1_3, new GBC(0, 5).setIpad(80, 10).setWeight(100, 0));//建模文件编辑
+                editPanel1.add(jLabelFir_1_3, new GBC(0, 5).setIpad(30, 10).setWeight(0, 0));//建模文件编辑
+                editPanel1.add(jLabelFir_1_4, new GBC(1, 5).setIpad(10, 10).setWeight(100, 0));
+                editPanel1.add(jButtonFir_1_11, new GBC(2, 5).setIpad(10, 10).setWeight(0, 0));
+                editPanel1.add(jButtonFir_1_12, new GBC(3, 5).setIpad(10, 10).setWeight(0, 0));
                 editPanel1.add(jScrollPaneFir1, new GBC(0, 6, 4, 1).setIpad(80, 10).setWeight(100, 100));
-                editPanel1.add(jButtonFir_1_11, new GBC(2, 7).setIpad(20, 10).setWeight(50, 0));
-                editPanel1.add(jButtonFir_1_12, new GBC(3, 7).setIpad(20, 10).setWeight(50, 0));
 
                 firstPanel.add(editPanel1, BorderLayout.CENTER);
 
@@ -165,9 +195,9 @@ public class Optimization extends JFrame {
                 jButtonFir_1_10.addActionListener(new ActionListener() {
                     @Override
                     public void actionPerformed(ActionEvent e) {
-                        FileChooser fc = new FileChooser("选择保存模型文件夹", FileChooser.SELECT_DIRECTORY, "D:\\Users\\2017\\dissertation\\chapter3\\AoCao\\mesh");
+                        FileChooser fc = new FileChooser("选择保存模型文件夹", FileChooser.SELECT_DIRECTORY, workingDirectory.getAbsolutePath());
                         modelFolder = fc.getFile();
-                        System.out.println("modelFolder=" + modelFolder.getAbsolutePath());
+                        //System.out.println("modelFolder=" + modelFolder.getAbsolutePath());
                         if (modelFolder.equals(null)) {
                             modelFolder = new File("C:");
                         }
@@ -193,12 +223,43 @@ public class Optimization extends JFrame {
                 });
                 jTableFir_1_0.addKeyListener(new KeyAdapter() {
                     @Override
-                    public void keyTyped(KeyEvent e) {
+                    public void keyPressed(KeyEvent e) {
                         if (e.getKeyCode() == KeyEvent.VK_ENTER) {
                             updateTable(1, jTableFir_1_0);
                         }
                     }
-
+                });
+                jButtonFir_1_12.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        //模型创建脚本存放在工作目录中，不在模型存储文件夹中
+                        FileChooser fc = new FileChooser(FileChooser.NEW_FILE, workingDirectory.getAbsolutePath());
+                        String fileFilter[] = {"vbs", "txt"};
+                        fc.setFileType(fileFilter);
+                        fc.setDefaultFileName("createModel.vbs");
+                        createModelFile = fc.getFile();
+                        if (createModelFile != null) {
+                            jLabelFir_1_4.setText(createModelFile.getAbsolutePath());
+                            //设置j
+                            
+                        }
+                    }
+                });
+                jButtonFir_1_11.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        //模型创建脚本存放在工作目录中，不在模型存储文件夹中
+                        FileChooser fc = new FileChooser(FileChooser.OPEN_FILE, workingDirectory.getAbsolutePath());
+                        String fileFilter[] = {"vbs", "txt"};
+                        fc.setFileType(fileFilter);
+                        fc.setDefaultFileName("createModel.vbs");
+                        createModelFile = fc.getFile();
+                        if (createModelFile != null) {
+                            jLabelFir_1_4.setText(createModelFile.getAbsolutePath());
+                            //设置jTextAreaFir_1
+                            jTextAreaFir_1.setText();
+                        }
+                    }
                 });
                 break;
             case 2:
@@ -450,11 +511,12 @@ public class Optimization extends JFrame {
     }
 
     private void updateTable(int tab, JTable table) {
-        int editingRow = table.getEditingRow();
+        //当按下enter键后，如果最后一行有数据，就表格增加一行
         int rowCount = table.getRowCount();
-        System.out.println("" + editingRow);
-        System.out.println("" + rowCount);
-        if (editingRow == rowCount) {
+        System.out.println("total rows=" + rowCount);
+        String lastVar = (String) table.getValueAt(rowCount - 1, 0);
+        if (!lastVar.trim().equals("")) {//如果最后一行第一列不为空
+            System.out.println("add Row");
             DefaultTableModel dtm = (DefaultTableModel) table.getModel();
             Object[] nullRow = new Object[1];
             nullRow[0] = "";
@@ -469,50 +531,23 @@ public class Optimization extends JFrame {
      * @param rowNum 写入的数据所在行号 写入的数据
      */
     private void addRow(int tab, JTable table, int rowNum, Object[] data) {
-        //tab==0表示每次写入数据后保证table后有一个空行
-
-        if (tab == 0 || tab == 1) {
-            //纯文本表格添加方式
-            if (table.getRowCount() > rowNum) {
-                for (int i = 0; i <= data.length - 1; i++) {
-                    table.setValueAt(data[i], rowNum, i);
-                }
-                if (tab == 0) {
-                    DefaultTableModel dtm = (DefaultTableModel) table.getModel();
-                    Object[] nullRow = new Object[1];
-                    nullRow[0] = "";
-                    dtm.addRow(nullRow);
-                }
-            } else {
+        if (table.getRowCount() > rowNum) {
+            for (int i = 0; i <= data.length - 1; i++) {
+                table.setValueAt(data[i], rowNum, i);
+            }
+            if (tab == 0) {
                 DefaultTableModel dtm = (DefaultTableModel) table.getModel();
                 Object[] nullRow = new Object[1];
                 nullRow[0] = "";
                 dtm.addRow(nullRow);
-                addRow(tab, table, rowNum, data);
             }
-        } else if (tab == 2 || tab == 3) {
-            //针对table1的设置
-            if (table.getRowCount() > rowNum) {
-                for (int i = 0; i <= data.length - 1; i++) {
-                    if (i != 6) {
-                        table.setValueAt(data[i], rowNum, i);
-                    }
-                }
-                if (tab == 2) {
-                    DefaultTableModel dtm = (DefaultTableModel) table.getModel();
-                    Object[] nullRow = new Object[1];
-                    nullRow[0] = "";
-                    dtm.addRow(nullRow);
-                }
-            } else {
-                DefaultTableModel dtm = (DefaultTableModel) table.getModel();
-                Object[] nullRow = new Object[1];
-                nullRow[0] = "";
-                dtm.addRow(nullRow);
-                addRow(tab, table, rowNum, data);
-            }
+        } else {
+            DefaultTableModel dtm = (DefaultTableModel) table.getModel();
+            Object[] nullRow = new Object[1];
+            nullRow[0] = "";
+            dtm.addRow(nullRow);
+            addRow(tab, table, rowNum, data);
         }
-
     }
 
 }
