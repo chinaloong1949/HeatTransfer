@@ -25,12 +25,24 @@ public class FileOperate {
 
     File file;
 
+    /**
+     * 仅仅写入文件需要传入fileName,从文件读取可以从方法传入文件或文件名，此时构造函数传入的fileName会被覆盖
+     *
+     * @param fileName
+     */
     public FileOperate(String fileName) {
         file = new File(fileName);
     }
 
+    /**
+     *
+     * @param file 仅仅写入文件需要传入fileName,从文件读取可以从方法传入文件或文件名，此时构造函数传入的file会被覆盖
+     */
     public FileOperate(File file) {
         this.file = file;
+    }
+
+    public FileOperate() {
     }
 
     public void writeToFileString(String content, boolean append) {
@@ -124,6 +136,12 @@ public class FileOperate {
         return data;
     }
 
+    /**
+     * 从文件中读入一行数据，作为字符串返回
+     *
+     * @param file
+     * @return
+     */
     public String readFromFileString(File file) {
         //从文件中读入一行数据，作为字符串返回
         BufferedReader reader = null;
@@ -145,6 +163,12 @@ public class FileOperate {
         return content;
     }
 
+    /**
+     * 读取所有文件内容到一个字符串中，并返回
+     *
+     * @param file
+     * @return
+     */
     public String readFromFileStringWhole(File file) {
         //读取所有文件内容到一个字符串中，并返回
         BufferedReader reader = null;

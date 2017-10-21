@@ -45,4 +45,16 @@ public class XStreamUtil {
         return xml;
     }
 
+    public static OptimizationData OptimizationDataFromXML(String xml) {
+        xstream.alias("OptimizationData", OptimizationData.class);
+        OptimizationData data = (OptimizationData) xstream.fromXML(xml);
+        return data;
+    }
+
+    public static String OptimizationDataToXML(OptimizationData data) {
+        xstream.alias("OptimizationData", OptimizationData.class);
+        String xml = xstream.toXML(data);
+        return xml;
+    }
+
 }

@@ -7,6 +7,7 @@ package heattransfer;
 
 import GUI.GBC;
 import common.FileChooser;
+import common.FileOperate;
 import common.OptimizationData;
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -20,9 +21,6 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
-import java.io.IOException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -47,8 +45,15 @@ public class Optimization extends JFrame {
     File modelFolder;
     File createModelFile;
     File meshFolder;
+    File createMeshFile;
+    File solveFolder;
+    File createSolveFile;
+    File resultFolder;
+    File dataProcessFile;
+    File resultFile;
 
     OptimizationData data = new OptimizationData();
+    File dataFile;
 
     public Optimization(int x, int y, int width, int height) {
 
@@ -58,7 +63,12 @@ public class Optimization extends JFrame {
         JMenu fileMenu = new JMenu("文件");
 
         JMenuItem chooseWorkingDirectoryMenuItem = new JMenuItem("设置工作目录");
+        JMenuItem openDataMenuItem = new JMenuItem("打开");
+        JMenuItem saveDataMenuItem = new JMenuItem("保存");
+        fileMenu.add(openDataMenuItem);
+        fileMenu.add(saveDataMenuItem);
         fileMenu.add(chooseWorkingDirectoryMenuItem);
+
         menuBar.add(fileMenu);
 
 //        this.getContentPane().add(getGridBagPanes(2, null));
@@ -80,6 +90,29 @@ public class Optimization extends JFrame {
                 FileChooser fc = new FileChooser("设置工作目录", FileChooser.SELECT_DIRECTORY, "C:");
                 workingDirectory = fc.getFile();
                 changePanel(1, null);
+            }
+        });
+
+        saveDataMenuItem.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                FileChooser fc = new FileChooser("保存当前设置到", FileChooser.SAVE_TO_FILE, workingDirectory.getAbsolutePath());
+                fc.setFileType(new String[]{"xml", "txt"});
+                dataFile = fc.getFile();
+                if (dataFile != null) {
+                    data.saveDataToFile(dataFile);
+                }
+            }
+        });
+        openDataMenuItem.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                FileChooser fc = new FileChooser("打开设置文件", FileChooser.OPEN_FILE, workingDirectory.getAbsolutePath());
+                fc.setFileType(new String[]{"xml", "txt"});
+                dataFile = fc.getFile();
+                if (dataFile != null) {
+                    data = OptimizationData.readDataFromFile(dataFile);
+                }
             }
         });
     }
@@ -121,7 +154,7 @@ public class Optimization extends JFrame {
                 jLabelFir_1_0.setFont(new Font("楷体", Font.BOLD, 20));
                 JLabel jLabelFir_1_1 = new JLabel("选择模型存储文件夹：");
                 JTextField jTextFieldFir_1_1;
-                jTextFieldFir_1_1 = new JTextField(new File(workingDirectory, "mesh").getAbsolutePath());
+                jTextFieldFir_1_1 = new JTextField(new File(workingDirectory, "model").getAbsolutePath());
 
                 JButton jButtonFir_1_10 = new JButton("打开");
                 JLabel jLabelFir_1_2 = new JLabel("模型控制参数：");
@@ -129,12 +162,13 @@ public class Optimization extends JFrame {
                 JLabel jLabelFir_1_3 = new JLabel("建模文件编辑：");
                 JLabel jLabelFir_1_4 = new JLabel("");
                 JTextArea jTextAreaFir_1 = new JTextArea();
+                //jTextAreaFir_1.setFont(new Font("宋体",Font.BOLD,14));
                 JScrollPane jScrollPaneFir1 = new JScrollPane(jTextAreaFir_1);
 
                 JButton jButtonFir_1_11 = new JButton("打开");
                 JButton jButtonFir_1_12 = new JButton("新建");
 
-                Object[] title = {"模型参数", "数值", "单位"};
+                Object[] title = {"模型参数", "单位", "备注"};
                 addRow(0, jTableFir_1_0, 0, title);
 
                 editPanel1.add(jLabelFir_1_0, new GBC(0, 0).setIpad(80, 10).setWeight(100, 0));//模型设置
@@ -162,10 +196,24 @@ public class Optimization extends JFrame {
 
                 jPanel.add(forthPanel, new GBC(3, 0).
                         setFill(GBC.BOTH).setIpad(50, 400).setWeight(0, 100));
-                jButtonFir_1_0.addActionListener(new ActionListener() {
+                jButtonFir_1_0.addActionListener(new ActionListener() {//确定按钮
                     @Override
                     public void actionPerformed(ActionEvent e) {
-                        saveData(1, data);
+                        data.setModelFolder(new File(jTextFieldFir_1_1.getText()));
+                        int varCount = jTableFir_1_0.getRowCount();
+                        String modelVar[] = new String[varCount];
+                        String modelUnit[] = new String[varCount];
+                        String modelDiscription[] = new String[varCount];
+                        for (int i = 1; i < varCount; i++) {//从第二行开始读，第一行是title
+                            modelVar[i - 1] = (String) jTableFir_1_0.getValueAt(i, 0);
+                            modelUnit[i - 1] = (String) jTableFir_1_0.getValueAt(i, 1);
+                            modelDiscription[i - 1] = (String) jTableFir_1_0.getValueAt(i, 2);
+                        }
+                        data.setModelVar(modelVar);
+                        data.setModelUnit(modelUnit);
+                        data.setModelDiscription(modelDiscription);
+                        data.setCreateModelFile(createModelFile);
+                        data.saveModelData();
                     }
                 });
                 jButtonFir_1_1.addActionListener(new ActionListener() {
@@ -229,35 +277,39 @@ public class Optimization extends JFrame {
                         }
                     }
                 });
-                jButtonFir_1_12.addActionListener(new ActionListener() {
+                jButtonFir_1_12.addActionListener(new ActionListener() {//新建按钮
                     @Override
                     public void actionPerformed(ActionEvent e) {
                         //模型创建脚本存放在工作目录中，不在模型存储文件夹中
                         FileChooser fc = new FileChooser(FileChooser.NEW_FILE, workingDirectory.getAbsolutePath());
-                        String fileFilter[] = {"vbs", "txt"};
+                        String fileFilter[] = {"vbs", "py", "txt"};
                         fc.setFileType(fileFilter);
                         fc.setDefaultFileName("createModel.vbs");
                         createModelFile = fc.getFile();
                         if (createModelFile != null) {
                             jLabelFir_1_4.setText(createModelFile.getAbsolutePath());
                             //设置j
-                            
+                            jTextAreaFir_1.setText("");
                         }
                     }
                 });
-                jButtonFir_1_11.addActionListener(new ActionListener() {
+                jButtonFir_1_11.addActionListener(new ActionListener() {//打开按钮
                     @Override
                     public void actionPerformed(ActionEvent e) {
                         //模型创建脚本存放在工作目录中，不在模型存储文件夹中
                         FileChooser fc = new FileChooser(FileChooser.OPEN_FILE, workingDirectory.getAbsolutePath());
-                        String fileFilter[] = {"vbs", "txt"};
+                        String fileFilter[] = {"vbs", "py", "txt"};
                         fc.setFileType(fileFilter);
                         fc.setDefaultFileName("createModel.vbs");
                         createModelFile = fc.getFile();
                         if (createModelFile != null) {
                             jLabelFir_1_4.setText(createModelFile.getAbsolutePath());
                             //设置jTextAreaFir_1
-                            jTextAreaFir_1.setText();
+                            jTextAreaFir_1.setText("");
+                            String content[] = new FileOperate().readFromFileStringArray(createModelFile);
+                            for (int i = 0; i < content.length; i++) {
+                                jTextAreaFir_1.append(content[i] + "\n");
+                            }
                         }
                     }
                 });
@@ -282,6 +334,42 @@ public class Optimization extends JFrame {
                 JButton jButtonSec_2_2 = new JButton("继续");
                 JButton jButtonSec_3_0 = new JButton("编辑");
                 JButton jButtonSec_4_0 = new JButton("编辑");
+
+                JPanel editPanel2 = new JPanel(new GridBagLayout());
+                JLabel jLabelSec_2_0 = new JLabel("网格设置");
+                jLabelSec_2_0.setFont(new Font("楷体", Font.BOLD, 20));
+                JLabel jLabelSec_2_1 = new JLabel("选择网格存储文件夹：");
+                JTextField jTextFieldSec_2_1;
+                jTextFieldSec_2_1 = new JTextField(new File(workingDirectory, "mesh").getAbsolutePath());
+
+                JButton jButtonSec_2_10 = new JButton("打开");
+                JLabel jLabelSec_2_2 = new JLabel("网格控制：");
+                JTable jTableSec_2_0 = new JTable(1, 3);
+                JLabel jLabelSec_2_3 = new JLabel("网格划分文件编辑：");
+                JLabel jLabelSec_2_4 = new JLabel("");
+                JTextArea jTextAreaSec_2 = new JTextArea();
+                //jTextAreaFir_1.setFont(new Font("宋体",Font.BOLD,14));
+                JScrollPane jScrollPaneSec1 = new JScrollPane(jTextAreaSec_2);
+
+                JButton jButtonSec_2_11 = new JButton("打开");
+                JButton jButtonSec_2_12 = new JButton("新建");
+
+                Object[] title2 = {"模型参数", "单位", "备注"};
+                addRow(0, jTableSec_2_0, 0, title2);
+
+                editPanel2.add(jLabelSec_2_0, new GBC(0, 0).setIpad(80, 10).setWeight(100, 0));//模型设置
+                editPanel2.add(jLabelSec_2_1, new GBC(0, 1).setIpad(80, 10).setWeight(100, 0));//选择模型存储文件夹
+                editPanel2.add(jTextFieldSec_2_1, new GBC(0, 2, 3, 1).setIpad(60, 10).setWeight(100, 0));
+                editPanel2.add(jButtonSec_2_10, new GBC(3, 2).setIpad(20, 10).setWeight(0, 0));
+                editPanel2.add(jLabelSec_2_2, new GBC(0, 3).setIpad(80, 10).setWeight(100, 0));//模型控制参数
+                editPanel2.add(jTableSec_2_0, new GBC(0, 4, 4, 1).setIpad(80, 30).setWeight(100, 0));
+                editPanel2.add(jLabelSec_2_3, new GBC(0, 5).setIpad(30, 10).setWeight(0, 0));//建模文件编辑
+                editPanel2.add(jLabelSec_2_4, new GBC(1, 5).setIpad(10, 10).setWeight(100, 0));
+                editPanel2.add(jButtonSec_2_11, new GBC(2, 5).setIpad(10, 10).setWeight(0, 0));
+                editPanel2.add(jButtonSec_2_12, new GBC(3, 5).setIpad(10, 10).setWeight(0, 0));
+                editPanel2.add(jScrollPaneSec1, new GBC(0, 6, 4, 1).setIpad(80, 10).setWeight(100, 100));
+
+                secondPanel2.add(editPanel2, BorderLayout.CENTER);
 
                 firstPanel2.add(jButtonSec_1_0, BorderLayout.SOUTH);
                 thirdPanel2.add(jButtonSec_3_0, BorderLayout.SOUTH);
@@ -318,6 +406,8 @@ public class Optimization extends JFrame {
                 jButtonSec_2_1.addActionListener(new ActionListener() {
                     @Override
                     public void actionPerformed(ActionEvent e) {
+                        data.setMeshFolder(new File(jTextFieldSec_2_1.getText()));
+                        data.setCreateMeshFile(createMeshFile);
                         saveData(2, data);
                     }
                 });
@@ -337,6 +427,42 @@ public class Optimization extends JFrame {
                     @Override
                     public void actionPerformed(ActionEvent e) {
                         changePanel(4, null);
+                    }
+                });
+                jButtonSec_2_12.addActionListener(new ActionListener() {//新建按钮
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        //模型创建脚本存放在工作目录中，不在模型存储文件夹中
+                        FileChooser fc = new FileChooser(FileChooser.NEW_FILE, workingDirectory.getAbsolutePath());
+                        String fileFilter[] = {"rpl", "py", "txt"};
+                        fc.setFileType(fileFilter);
+                        fc.setDefaultFileName("createMesh.rpl");
+                        createMeshFile = fc.getFile();
+                        if (createMeshFile != null) {
+                            jLabelSec_2_4.setText(createMeshFile.getAbsolutePath());
+                            //设置j
+                            jTextAreaSec_2.setText("");
+                        }
+                    }
+                });
+                jButtonSec_2_11.addActionListener(new ActionListener() {//打开按钮
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        //模型创建脚本存放在工作目录中，不在模型存储文件夹中
+                        FileChooser fc = new FileChooser(FileChooser.OPEN_FILE, workingDirectory.getAbsolutePath());
+                        String fileFilter[] = {"rpl", "py", "txt"};
+                        fc.setFileType(fileFilter);
+                        fc.setDefaultFileName("createMesh.rpl");
+                        createMeshFile = fc.getFile();
+                        if (createMeshFile != null) {
+                            jLabelSec_2_4.setText(createMeshFile.getAbsolutePath());
+                            //设置jTextAreaFir_1
+                            jTextAreaSec_2.setText("");
+                            String content[] = new FileOperate().readFromFileStringArray(createMeshFile);
+                            for (int i = 0; i < content.length; i++) {
+                                jTextAreaSec_2.append(content[i] + "\n");
+                            }
+                        }
                     }
                 });
 
@@ -359,6 +485,42 @@ public class Optimization extends JFrame {
                 JButton jButtonThi_3_1 = new JButton("确定");
                 JButton jButtonThi_3_2 = new JButton("继续");
                 JButton jButtonThi_4_0 = new JButton("编辑");
+
+                JPanel editPanel3 = new JPanel(new GridBagLayout());
+                JLabel jLabelThi_3_0 = new JLabel("计算设置");
+                jLabelThi_3_0.setFont(new Font("楷体", Font.BOLD, 20));
+                JLabel jLabelThi_3_1 = new JLabel("选择计算结果存储文件夹：");
+                JTextField jTextFieldThi_3_1;
+                jTextFieldThi_3_1 = new JTextField(new File(workingDirectory, "solve").getAbsolutePath());
+
+                JButton jButtonThi_3_10 = new JButton("打开");
+                JLabel jLabelThi_3_2 = new JLabel("网格控制：");
+                JTable jTableThi_3_0 = new JTable(1, 3);
+                JLabel jLabelThi_3_3 = new JLabel("网格划分文件编辑：");
+                JLabel jLabelThi_3_4 = new JLabel("");
+                JTextArea jTextAreaThi_3 = new JTextArea();
+                //jTextAreaFir_1.setFont(new Font("宋体",Font.BOLD,14));
+                JScrollPane jScrollPaneThi1 = new JScrollPane(jTextAreaThi_3);
+
+                JButton jButtonThi_3_11 = new JButton("打开");
+                JButton jButtonThi_3_12 = new JButton("新建");
+
+                Object[] title3 = {"模型参数", "单位", "备注"};
+                addRow(0, jTableThi_3_0, 0, title3);
+
+                editPanel3.add(jLabelThi_3_0, new GBC(0, 0).setIpad(80, 10).setWeight(100, 0));//模型设置
+                editPanel3.add(jLabelThi_3_1, new GBC(0, 1).setIpad(80, 10).setWeight(100, 0));//选择模型存储文件夹
+                editPanel3.add(jTextFieldThi_3_1, new GBC(0, 2, 3, 1).setIpad(60, 10).setWeight(100, 0));
+                editPanel3.add(jButtonThi_3_10, new GBC(3, 2).setIpad(20, 10).setWeight(0, 0));
+                editPanel3.add(jLabelThi_3_2, new GBC(0, 3).setIpad(80, 10).setWeight(100, 0));//模型控制参数
+                editPanel3.add(jTableThi_3_0, new GBC(0, 4, 4, 1).setIpad(80, 30).setWeight(100, 0));
+                editPanel3.add(jLabelThi_3_3, new GBC(0, 5).setIpad(30, 10).setWeight(0, 0));//建模文件编辑
+                editPanel3.add(jLabelThi_3_4, new GBC(1, 5).setIpad(10, 10).setWeight(100, 0));
+                editPanel3.add(jButtonThi_3_11, new GBC(2, 5).setIpad(10, 10).setWeight(0, 0));
+                editPanel3.add(jButtonThi_3_12, new GBC(3, 5).setIpad(10, 10).setWeight(0, 0));
+                editPanel3.add(jScrollPaneThi1, new GBC(0, 6, 4, 1).setIpad(80, 10).setWeight(100, 100));
+
+                thirdPanel3.add(editPanel3, BorderLayout.CENTER);
 
                 firstPanel3.add(jButtonThi_1_0, BorderLayout.SOUTH);
                 secondPanel3.add(jButtonThi_2_0, BorderLayout.SOUTH);
@@ -416,6 +578,42 @@ public class Optimization extends JFrame {
                         changePanel(4, null);
                     }
                 });
+                jButtonThi_3_12.addActionListener(new ActionListener() {//新建按钮
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        //模型创建脚本存放在工作目录中，不在模型存储文件夹中
+                        FileChooser fc = new FileChooser(FileChooser.NEW_FILE, workingDirectory.getAbsolutePath());
+                        String fileFilter[] = {"jou", "py", "txt"};
+                        fc.setFileType(fileFilter);
+                        fc.setDefaultFileName("createSolve.jou");
+                        createSolveFile = fc.getFile();
+                        if (createSolveFile != null) {
+                            jLabelThi_3_4.setText(createSolveFile.getAbsolutePath());
+                            //设置j
+                            jTextAreaThi_3.setText("");
+                        }
+                    }
+                });
+                jButtonThi_3_11.addActionListener(new ActionListener() {//打开按钮
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        //模型创建脚本存放在工作目录中，不在模型存储文件夹中
+                        FileChooser fc = new FileChooser(FileChooser.OPEN_FILE, workingDirectory.getAbsolutePath());
+                        String fileFilter[] = {"jou", "py", "txt"};
+                        fc.setFileType(fileFilter);
+                        fc.setDefaultFileName("createSolve.jou");
+                        createSolveFile = fc.getFile();
+                        if (createSolveFile != null) {
+                            jLabelThi_3_4.setText(createSolveFile.getAbsolutePath());
+                            //设置jTextAreaFir_1
+                            jTextAreaThi_3.setText("");
+                            String content[] = new FileOperate().readFromFileStringArray(createSolveFile);
+                            for (int i = 0; i < content.length; i++) {
+                                jTextAreaThi_3.append(content[i] + "\n");
+                            }
+                        }
+                    }
+                });
                 break;
             case 4:
                 JPanel firstPanel4 = new JPanel(new BorderLayout());
@@ -433,6 +631,42 @@ public class Optimization extends JFrame {
 
                 JButton jButtonFor_4_0 = new JButton("确定");
                 JButton jButtonFor_4_1 = new JButton("返回");
+
+                JPanel editPanel4 = new JPanel(new GridBagLayout());
+                JLabel jLabelFor_4_0 = new JLabel("数据处理设置");
+                jLabelFor_4_0.setFont(new Font("楷体", Font.BOLD, 20));
+                JLabel jLabelFor_4_1 = new JLabel("选择数据处理结果保存文件夹：");
+                JTextField jTextFieldFor_4_1;
+                jTextFieldFor_4_1 = new JTextField(new File(workingDirectory, "result").getAbsolutePath());
+
+                JButton jButtonFor_4_10 = new JButton("打开");
+                JLabel jLabelFor_4_2 = new JLabel("网格控制：");
+                JTable jTableFor_4_0 = new JTable(1, 3);
+                JLabel jLabelFor_4_3 = new JLabel("网格划分文件编辑：");
+                JLabel jLabelFor_4_4 = new JLabel("");
+                JTextArea jTextAreaFor_4 = new JTextArea();
+                //jTextAreaFir_1.setFont(new Font("宋体",Font.BOLD,14));
+                JScrollPane jScrollPaneFor1 = new JScrollPane(jTextAreaFor_4);
+
+                JButton jButtonFor_4_11 = new JButton("打开");
+                JButton jButtonFor_4_12 = new JButton("新建");
+
+                Object[] title4 = {"模型参数", "单位", "备注"};
+                addRow(0, jTableFor_4_0, 0, title4);
+
+                editPanel4.add(jLabelFor_4_0, new GBC(0, 0).setIpad(80, 10).setWeight(100, 0));//模型设置
+                editPanel4.add(jLabelFor_4_1, new GBC(0, 1).setIpad(80, 10).setWeight(100, 0));//选择模型存储文件夹
+                editPanel4.add(jTextFieldFor_4_1, new GBC(0, 2, 3, 1).setIpad(60, 10).setWeight(100, 0));
+                editPanel4.add(jButtonFor_4_10, new GBC(3, 2).setIpad(20, 10).setWeight(0, 0));
+                editPanel4.add(jLabelFor_4_2, new GBC(0, 3).setIpad(80, 10).setWeight(100, 0));//模型控制参数
+                editPanel4.add(jTableFor_4_0, new GBC(0, 4, 4, 1).setIpad(80, 30).setWeight(100, 0));
+                editPanel4.add(jLabelFor_4_3, new GBC(0, 5).setIpad(30, 10).setWeight(0, 0));//建模文件编辑
+                editPanel4.add(jLabelFor_4_4, new GBC(1, 5).setIpad(10, 10).setWeight(100, 0));
+                editPanel4.add(jButtonFor_4_11, new GBC(2, 5).setIpad(10, 10).setWeight(0, 0));
+                editPanel4.add(jButtonFor_4_12, new GBC(3, 5).setIpad(10, 10).setWeight(0, 0));
+                editPanel4.add(jScrollPaneFor1, new GBC(0, 6, 4, 1).setIpad(80, 10).setWeight(100, 100));
+
+                forthPanel4.add(editPanel4, BorderLayout.CENTER);
 
                 firstPanel4.add(jButtonFor_1_0, BorderLayout.SOUTH);
                 secondPanel4.add(jButtonFor_2_0, BorderLayout.SOUTH);
@@ -483,6 +717,42 @@ public class Optimization extends JFrame {
                     public void actionPerformed(ActionEvent e) {
                         //保存面板四中的数据
                         //saveData(4,data);
+                    }
+                });
+                jButtonFor_4_12.addActionListener(new ActionListener() {//新建按钮
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        //模型创建脚本存放在工作目录中，不在模型存储文件夹中
+                        FileChooser fc = new FileChooser(FileChooser.NEW_FILE, workingDirectory.getAbsolutePath());
+                        String fileFilter[] = {"vbs", "py", "txt"};
+                        fc.setFileType(fileFilter);
+                        fc.setDefaultFileName("dataProcess.vbs");
+                        dataProcessFile = fc.getFile();
+                        if (dataProcessFile != null) {
+                            jLabelFor_4_4.setText(dataProcessFile.getAbsolutePath());
+                            //设置j
+                            jTextAreaFor_4.setText("");
+                        }
+                    }
+                });
+                jButtonFor_4_11.addActionListener(new ActionListener() {//打开按钮
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        //模型创建脚本存放在工作目录中，不在模型存储文件夹中
+                        FileChooser fc = new FileChooser(FileChooser.OPEN_FILE, workingDirectory.getAbsolutePath());
+                        String fileFilter[] = {"vbs", "py", "txt"};
+                        fc.setFileType(fileFilter);
+                        fc.setDefaultFileName("dataProcess.vbs");
+                        dataProcessFile = fc.getFile();
+                        if (dataProcessFile != null) {
+                            jLabelFor_4_4.setText(dataProcessFile.getAbsolutePath());
+                            //设置jTextAreaFir_1
+                            jTextAreaFor_4.setText("");
+                            String content[] = new FileOperate().readFromFileStringArray(dataProcessFile);
+                            for (int i = 0; i < content.length; i++) {
+                                jTextAreaFor_4.append(content[i] + "\n");
+                            }
+                        }
                     }
                 });
                 break;
@@ -547,6 +817,20 @@ public class Optimization extends JFrame {
             nullRow[0] = "";
             dtm.addRow(nullRow);
             addRow(tab, table, rowNum, data);
+        }
+    }
+
+    /**
+     *
+     * @param tab tab==1表示从模型开始初始化，tab==2表示从网格开始初始化，tab==3表示从计算开始初始化
+     */
+    private void initSolve(int tab) {
+        if (tab == 1) {
+
+        } else if (tab == 2) {
+
+        } else if (tab == 3) {
+            data.checkData(3);//检测数据是否齐全
         }
     }
 
