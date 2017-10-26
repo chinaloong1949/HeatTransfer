@@ -23,6 +23,7 @@ import javax.swing.Box;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JSplitPane;
 import javax.swing.JTextArea;
@@ -75,28 +76,39 @@ public class MailTo extends JFrame {
 
             @Override
             public void actionPerformed(ActionEvent e) {
-                send();
+                if (send()) {
+                    JOptionPane.showMessageDialog(null, "已经向作者发送邮件！");
+                }else{
+                    JOptionPane.showMessageDialog(null, "邮件发送失败，请检查网络或重试！");
+                }
             }
         });
 
     }
 
-    public void send() {
+    public boolean send() {
         String content = textArea.getText() + "发送人信息：" + contactAddress.getText();
+        try {
+            MailSenderInfo mailInfo = new MailSenderInfo();
+            mailInfo.setMailServerHost("smtp.163.com");
+            mailInfo.setMailServerPort("25");
+            mailInfo.setValidate(true);
+            mailInfo.setUserName("soft20141224@163.com");
+            mailInfo.setPassword("20141224");
+            mailInfo.setFromAddress("soft20141224@163.com");
+            mailInfo.setToAddress(emailAddress);
+            mailInfo.setSubject("问题反馈");
+            mailInfo.setContent(content);
 
-        MailSenderInfo mailInfo = new MailSenderInfo();
-        mailInfo.setMailServerHost("smtp.163.com");
-        mailInfo.setMailServerPort("25");
-        mailInfo.setValidate(true);
-        mailInfo.setUserName("soft20141224@163.com");
-        mailInfo.setPassword("20141224");
-        mailInfo.setFromAddress("soft20141224@163.com");
-        mailInfo.setToAddress(emailAddress);
-        mailInfo.setSubject("问题反馈");
-        mailInfo.setContent(content);
+            SimpleMailSender sms = new SimpleMailSender();
 
-        SimpleMailSender sms = new SimpleMailSender();
-        sms.sendTextMail(mailInfo);
+            if (!sms.sendTextMail(mailInfo)) {
+                return false;
+            }
+        } catch (Exception e) {
+            return false;
+        }
+        return true;
 
     }
 

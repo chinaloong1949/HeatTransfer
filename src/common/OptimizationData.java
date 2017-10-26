@@ -6,7 +6,7 @@
 package common;
 
 import java.io.File;
-import javax.mail.Folder;
+import java.util.ArrayList;
 import javax.swing.JOptionPane;
 
 /**
@@ -14,6 +14,52 @@ import javax.swing.JOptionPane;
  * @author Administrator
  */
 public class OptimizationData {
+
+    /**
+     * @return the fluidType
+     */
+    public FluidType getFluidType() {
+        return fluidType;
+    }
+
+    /**
+     * @param fluidType the fluidType to set
+     */
+    public void setFluidType(String fluidType) {
+        switch (fluidType) {
+            case "userDefinedDataBase":
+                this.fluidType = FluidType.UserDefinedDataBase;
+                break;
+            case "fluentDataBase":
+                this.fluidType = FluidType.FluentDataBase;
+                break;
+            case "specificProperties": {
+                this.fluidType = FluidType.SpecificProperties;
+            }
+        }
+    }
+
+    public void setFluidType(FluidType fluidType) {
+        this.fluidType = fluidType;
+    }
+
+    /**
+     * @return the batchSolve
+     */
+    public boolean isBatchSolve() {
+        return batchSolve;
+    }
+
+    /**
+     * @param batchSolve the batchSolve to set
+     */
+    public void setBatchSolve(boolean batchSolve) {
+        this.batchSolve = batchSolve;
+    }
+
+    public enum OptimizationType {
+        Diff_Model, Diff_Mesh, Diff_Solve
+    }
 
     /**
      * @return the createMeshFile
@@ -61,6 +107,7 @@ public class OptimizationData {
     private File meshFolder = null;
     private File resultFolder = null;
     private File solveFolder = null;
+    private ArrayList<File> meshFiles = null;
     private String modelVar[] = null;//模型参数变量名
     private String modelDiscription[] = null;//对应的模型参数变量的值
     private String modelUnit[] = null;//对应的模型参数变量对应值的单位
@@ -68,6 +115,14 @@ public class OptimizationData {
     private File createMeshFile = null;
     private File createSolveFile = null;
     private File dataProcessFile = null;
+    private OptimizationType optimizationType = null;
+    private FluidType fluidType;
+    private File materialDataBaseFile=null;//当使用用户自定义材料库时，这个是库文件
+    private boolean batchSolve = false;
+
+    public enum FluidType {
+        FluentDataBase, UserDefinedDataBase, SpecificProperties
+    }
 
     public OptimizationData() {
 
@@ -97,7 +152,22 @@ public class OptimizationData {
     }
 
     public boolean checkSolveData() {
-
+        if (this.meshFolder == null) {
+            JOptionPane.showMessageDialog(null, "未设置网格文件夹！");
+            return false;
+        } else {
+            File[] fileList = meshFolder.listFiles();
+            for (File fileList1 : fileList) {
+                String name = fileList1.getName();
+                if (name.trim().toLowerCase().endsWith(".msh")) {
+                    meshFiles.add(fileList1);
+                }
+            }
+            if (meshFiles.isEmpty()) {
+                JOptionPane.showMessageDialog(null, "网格文件夹下没有找到后缀名为msh的网格文件！");
+                return false;
+            }
+        }
         return true;
     }
 
@@ -203,7 +273,7 @@ public class OptimizationData {
     }
 
     /**
-     * @param modelDiscription the modelVal to set
+     * @param modelDiscription 模型参数的备注，用于标记每个建模参数的意义，可以不设置
      */
     public void setModelDiscription(String[] modelDiscription) {
         this.modelDiscription = modelDiscription;
@@ -235,6 +305,59 @@ public class OptimizationData {
      */
     public void setCreateModelFile(File createModelFile) {
         this.createModelFile = createModelFile;
+    }
+
+    /**
+     * @return the optimizationType
+     */
+    public OptimizationType getOptimizationType() {
+        return optimizationType;
+    }
+
+    /**
+     * @param optimizationType the optimizationType to set
+     */
+    public void setOptimizationType(OptimizationType optimizationType) {
+        this.optimizationType = optimizationType;
+    }
+
+    public void setOptimizationType(String str) {
+        if (str.equals("Diff_Model")) {
+            this.optimizationType = OptimizationType.Diff_Model;
+        } else if (str.equals("Diff_Mesh")) {
+            this.optimizationType = OptimizationType.Diff_Mesh;
+        }
+        if (str.equals("Diff_Solve")) {
+            this.optimizationType = OptimizationType.Diff_Solve;
+        }
+    }
+
+    /**
+     * @return the meshFiles
+     */
+    public ArrayList<File> getMeshFiles() {
+        return meshFiles;
+    }
+
+    /**
+     * @param meshFiles the meshFiles to set
+     */
+    public void setMeshFiles(ArrayList<File> meshFiles) {
+        this.meshFiles = meshFiles;
+    }
+
+    /**
+     * @return the materialDataBaseFile
+     */
+    public File getMaterialDataBaseFile() {
+        return materialDataBaseFile;
+    }
+
+    /**
+     * @param materialDataBaseFile the materialDataBaseFile to set
+     */
+    public void setMaterialDataBaseFile(File materialDataBaseFile) {
+        this.materialDataBaseFile = materialDataBaseFile;
     }
 
 }

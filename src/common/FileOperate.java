@@ -32,6 +32,7 @@ public class FileOperate {
      */
     public FileOperate(String fileName) {
         file = new File(fileName);
+
     }
 
     /**
@@ -61,6 +62,29 @@ public class FileOperate {
                 e.printStackTrace();
             }
         }
+    }
+
+    public boolean writeToFileStrings(String content[], boolean append) {
+        BufferedWriter out = null;
+        try {
+            out = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file, append)));
+            for (String line : content) {
+                out.write(line);
+                out.newLine();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        } finally {
+            try {
+                if (out != null) {
+                    out.close();
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return true;
     }
 
     public void writeToFileInt(int content, boolean append) {
@@ -193,6 +217,12 @@ public class FileOperate {
         return content;
     }
 
+    /**
+     * 读入字符串后会丢掉文件中的换行符
+     *
+     * @param file
+     * @return
+     */
     public String[] readFromFileStringArray(File file) {
         BufferedReader reader = null;
         ArrayList<String> content = new ArrayList<>();
@@ -218,6 +248,52 @@ public class FileOperate {
             result[i] = content.get(i);
         }
         return result;
+    }
+
+    public static void copy(File file, File toFile) {
+        byte[] b = new byte[1024];
+        int a;
+        FileInputStream fis;
+        FileOutputStream fos;
+        try {
+            if (file.isDirectory()) {
+                String filepath = file.getAbsolutePath();
+                filepath = filepath.replace("\\\\", "/");
+                String toFilepath = toFile.getAbsolutePath();
+                toFilepath = toFilepath.replace("\\\\", "/");
+                int lastIndexOf = filepath.lastIndexOf("/");
+                toFilepath = toFilepath + filepath.substring(lastIndexOf, filepath.length());
+                File copy = new File(toFilepath);
+                //复制文件夹
+                if (!copy.exists()) {
+                    copy.mkdir();
+                }
+                //遍历文件夹
+                for (File f : file.listFiles()) {
+                    copy(f, copy);
+                }
+            } else {
+                if (toFile.isDirectory()) {
+                    String filepath = file.getAbsolutePath();
+                    filepath = filepath.replaceAll("\\\\", "/");
+                    String toFilepath = toFile.getAbsolutePath();
+                    toFilepath = toFilepath.replaceAll("\\\\", "/");
+                    int lastIndexOf = filepath.lastIndexOf("/");
+                    toFilepath = toFilepath + filepath.substring(lastIndexOf, filepath.length());
+
+                    //写文件
+                    File newFile = new File(toFilepath);
+                    fis = new FileInputStream(file);
+                    fos = new FileOutputStream(newFile);
+                    while ((a = fis.read(b)) != -1) {
+                        fos.write(b, 0, a);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
     }
 
 }
