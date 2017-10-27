@@ -23,7 +23,12 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.swing.ButtonGroup;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
@@ -34,7 +39,6 @@ import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JPanel;
-import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.JTextArea;
@@ -50,16 +54,8 @@ import javax.swing.table.DefaultTableModel;
 public class Optimization extends JFrame {
 
     JPanel contentPanel = new JPanel();
-    File workingDirectory = new File("D:\\Users\\2017\\dissertation\\chapter3\\AoCao");
-    File modelFolder;
-    File createModelFile;
-    File meshFolder;
+
     File createMeshFile;
-    File solveFolder;
-    File createSolveFile;
-    File resultFolder;
-    File dataProcessFile;
-    File resultFile;
 
     OptimizationData data = new OptimizationData();
     File dataFile;
@@ -82,6 +78,8 @@ public class Optimization extends JFrame {
         JMenu runMenu = new JMenu("运行");
         JMenuItem runItem = new JMenuItem("开始计算");
 
+        runMenu.add(runItem);
+
         JMenu helpMenu = new JMenu("帮助");
         JMenuItem aboutMeshItem = new JMenuItem("关于网格设置");
         JMenuItem aboutSolveItem = new JMenuItem("关于计算设置");
@@ -92,6 +90,7 @@ public class Optimization extends JFrame {
         helpMenu.add(contactItem);
 
         menuBar.add(fileMenu);
+        menuBar.add(runMenu);
         menuBar.add(helpMenu);
 
 //        this.getContentPane().add(getGridBagPanes(2, null));
@@ -110,16 +109,18 @@ public class Optimization extends JFrame {
         chooseWorkingDirectoryMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                FileChooser fc = new FileChooser("设置工作目录", FileChooser.SELECT_DIRECTORY, "C:");
-                workingDirectory = fc.getFile();
-                changePanel(1, null);
+                FileChooser fc = new FileChooser("设置工作目录", FileChooser.SELECT_DIRECTORY, data.getWorkingDirectory().getAbsolutePath());
+                if (fc.getFile() != null) {
+                    data.setWorkingDirectory(fc.getFile());
+                    changePanel(1, null);
+                }
             }
         });
 
         saveDataMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                FileChooser fc = new FileChooser("保存当前设置到", FileChooser.SAVE_TO_FILE, workingDirectory.getAbsolutePath());
+                FileChooser fc = new FileChooser("保存当前设置到", FileChooser.SAVE_TO_FILE, data.getWorkingDirectory().getAbsolutePath());
                 fc.setFileType(new String[]{"xml", "txt"});
                 dataFile = fc.getFile();
                 if (dataFile != null) {
@@ -130,11 +131,12 @@ public class Optimization extends JFrame {
         openDataMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                FileChooser fc = new FileChooser("打开设置文件", FileChooser.OPEN_FILE, workingDirectory.getAbsolutePath());
+                FileChooser fc = new FileChooser("打开设置文件", FileChooser.OPEN_FILE, data.getWorkingDirectory().getAbsolutePath());
                 fc.setFileType(new String[]{"xml", "txt"});
                 dataFile = fc.getFile();
                 if (dataFile != null) {
                     data = OptimizationData.readDataFromFile(dataFile);
+                    changePanel(1, null);
                 }
             }
         });
@@ -178,7 +180,7 @@ public class Optimization extends JFrame {
         jPanel.setLayout(new GridBagLayout());
         switch (tab) {
             case 1:
-                System.out.println("1");
+
                 JPanel firstPanel = new JPanel();
                 firstPanel.setLayout(new BorderLayout());
                 firstPanel.setBackground(Color.green);
@@ -207,10 +209,11 @@ public class Optimization extends JFrame {
                 jLabelFir_1_0.setFont(new Font("楷体", Font.BOLD, 20));
                 JLabel jLabelFir_1_1 = new JLabel("选择模型存储文件夹：");
                 JTextField jTextFieldFir_1_1;
-                jTextFieldFir_1_1 = new JTextField(new File(workingDirectory, "model").getAbsolutePath());
+                jTextFieldFir_1_1 = new JTextField(new File(data.getWorkingDirectory(), "model").getAbsolutePath());
                 if (data.getModelFolder() != null) {
                     jTextFieldFir_1_1.setText(data.getModelFolder().getAbsolutePath());
                 }
+                data.setModelFolder(new File(jTextFieldFir_1_1.getText()));
 
                 JButton jButtonFir_1_10 = new JButton("打开");
                 JLabel jLabelFir_1_2 = new JLabel("模型控制参数：");
@@ -226,13 +229,21 @@ public class Optimization extends JFrame {
 
                 Object[] title = {"模型参数", "单位", "备注"};
                 addRow(0, jTableFir_1_0, 0, title);
-                if (data.getModelVar().length != 0) {
+                if (data.getModelVar() != null && data.getModelVar().length > 0) {
                     String[] modelVar = data.getModelVar();
                     String[] modelUnit = data.getModelUnit();
                     String[] modelDescription = data.getModelDiscription();
                     for (int i = 0; i < data.getModelVar().length; i++) {
                         Object[] modelTableData = {modelVar[i], modelUnit[i], modelDescription[i]};
                         addRow(0, jTableFir_1_0, i + 1, modelTableData);
+                    }
+                }
+                if (data.getCreateModelFile() != null) {
+                    jLabelFir_1_4.setText(data.getCreateModelFile().getAbsolutePath());
+                    jTextAreaFir_1.setText("");
+                    String content[] = new FileOperate().readFromFileStringArray(data.getCreateModelFile());
+                    for (int i = 0; i < content.length; i++) {
+                        jTextAreaFir_1.append(content[i] + "\n");
                     }
                 }
 
@@ -277,8 +288,7 @@ public class Optimization extends JFrame {
                         data.setModelVar(modelVar);
                         data.setModelUnit(modelUnit);
                         data.setModelDiscription(modelDiscription);
-                        data.setCreateModelFile(createModelFile);
-                        data.saveModelData();
+                        data.setCreateModelFile(new File(jLabelFir_1_4.getText()));
                     }
                 });
                 jButtonFir_1_1.addActionListener(new ActionListener() {
@@ -305,18 +315,17 @@ public class Optimization extends JFrame {
                         changePanel(4, null);
                     }
                 });
-                jButtonFir_1_10.addActionListener(new ActionListener() {
+                jButtonFir_1_10.addActionListener(new ActionListener() {//打开按钮
                     @Override
                     public void actionPerformed(ActionEvent e) {
-                        FileChooser fc = new FileChooser("选择保存模型文件夹", FileChooser.SELECT_DIRECTORY, workingDirectory.getAbsolutePath());
-                        modelFolder = fc.getFile();
+                        FileChooser fc = new FileChooser("选择保存模型文件夹", FileChooser.SELECT_DIRECTORY, data.getWorkingDirectory().getAbsolutePath());
+                        data.setModelFolder(fc.getFile());
                         //System.out.println("modelFolder=" + modelFolder.getAbsolutePath());
-                        if (modelFolder.equals(null)) {
-                            modelFolder = new File("C:");
-                        }
-                        jTextFieldFir_1_1.setText(modelFolder.getAbsolutePath());
-                        if (!modelFolder.exists()) {
-                            modelFolder.mkdirs();
+                        if (data.getModelFolder() != null) {
+                            jTextFieldFir_1_1.setText(data.getModelFolder().getAbsolutePath());
+                            if (!data.getModelFolder().exists()) {
+                                data.getModelFolder().mkdirs();
+                            }
                         }
                     }
                 });
@@ -346,32 +355,31 @@ public class Optimization extends JFrame {
                     @Override
                     public void actionPerformed(ActionEvent e) {
                         //模型创建脚本存放在工作目录中，不在模型存储文件夹中
-                        FileChooser fc = new FileChooser(FileChooser.NEW_FILE, workingDirectory.getAbsolutePath());
+                        FileChooser fc = new FileChooser(FileChooser.NEW_FILE, data.getWorkingDirectory().getAbsolutePath());
                         String fileFilter[] = {"vbs", "py", "txt"};
                         fc.setFileType(fileFilter);
                         fc.setDefaultFileName("createModel.vbs");
-                        createModelFile = fc.getFile();
-                        if (createModelFile != null) {
-                            jLabelFir_1_4.setText(createModelFile.getAbsolutePath());
-                            //设置j
-                            jTextAreaFir_1.setText("");
-                        }
+                        data.setCreateModelFile(fc.getFile());
+                        jLabelFir_1_4.setText(data.getCreateModelFile().getAbsolutePath());
+                        //设置j
+                        jTextAreaFir_1.setText("");
+
                     }
                 });
                 jButtonFir_1_11.addActionListener(new ActionListener() {//打开按钮
                     @Override
                     public void actionPerformed(ActionEvent e) {
                         //模型创建脚本存放在工作目录中，不在模型存储文件夹中
-                        FileChooser fc = new FileChooser(FileChooser.OPEN_FILE, workingDirectory.getAbsolutePath());
+                        FileChooser fc = new FileChooser(FileChooser.OPEN_FILE, data.getWorkingDirectory().getAbsolutePath());
                         String fileFilter[] = {"vbs", "py", "txt"};
                         fc.setFileType(fileFilter);
                         fc.setDefaultFileName("createModel.vbs");
-                        createModelFile = fc.getFile();
-                        if (createModelFile != null) {
-                            jLabelFir_1_4.setText(createModelFile.getAbsolutePath());
+                        data.setCreateModelFile(fc.getFile());
+                        if (data.getCreateModelFile() != null) {
+                            jLabelFir_1_4.setText(data.getCreateModelFile().getAbsolutePath());
                             //设置jTextAreaFir_1
                             jTextAreaFir_1.setText("");
-                            String content[] = new FileOperate().readFromFileStringArray(createModelFile);
+                            String content[] = new FileOperate().readFromFileStringArray(data.getCreateModelFile());
                             for (int i = 0; i < content.length; i++) {
                                 jTextAreaFir_1.append(content[i] + "\n");
                             }
@@ -405,7 +413,11 @@ public class Optimization extends JFrame {
                 jLabelSec_2_0.setFont(new Font("楷体", Font.BOLD, 20));
                 JLabel jLabelSec_2_1 = new JLabel("选择网格存储文件夹：");
                 JTextField jTextFieldSec_2_1;
-                jTextFieldSec_2_1 = new JTextField(new File(workingDirectory, "mesh").getAbsolutePath());
+                jTextFieldSec_2_1 = new JTextField(new File(data.getWorkingDirectory(), "mesh").getAbsolutePath());
+                if (data.getMeshFolder() != null) {
+                    jTextFieldSec_2_1.setText(data.getMeshFolder().getAbsolutePath());
+                }
+                data.setMeshFolder(new File(jTextFieldSec_2_1.getText()));
 
                 JButton jButtonSec_2_10 = new JButton("打开");
                 JLabel jLabelSec_2_2 = new JLabel("网格控制：");
@@ -473,7 +485,6 @@ public class Optimization extends JFrame {
                     public void actionPerformed(ActionEvent e) {
                         data.setMeshFolder(new File(jTextFieldSec_2_1.getText()));
                         data.setCreateMeshFile(createMeshFile);
-                        saveData(2, data);
                     }
                 });
                 jButtonSec_2_2.addActionListener(new ActionListener() {
@@ -498,7 +509,7 @@ public class Optimization extends JFrame {
                     @Override
                     public void actionPerformed(ActionEvent e) {
                         //模型创建脚本存放在工作目录中，不在模型存储文件夹中
-                        FileChooser fc = new FileChooser(FileChooser.NEW_FILE, workingDirectory.getAbsolutePath());
+                        FileChooser fc = new FileChooser(FileChooser.NEW_FILE, data.getWorkingDirectory().getAbsolutePath());
                         String fileFilter[] = {"rpl", "py", "txt"};
                         fc.setFileType(fileFilter);
                         fc.setDefaultFileName("createMesh.rpl");
@@ -514,7 +525,7 @@ public class Optimization extends JFrame {
                     @Override
                     public void actionPerformed(ActionEvent e) {
                         //模型创建脚本存放在工作目录中，不在模型存储文件夹中
-                        FileChooser fc = new FileChooser(FileChooser.OPEN_FILE, workingDirectory.getAbsolutePath());
+                        FileChooser fc = new FileChooser(FileChooser.OPEN_FILE, data.getWorkingDirectory().getAbsolutePath());
                         String fileFilter[] = {"rpl", "py", "txt"};
                         fc.setFileType(fileFilter);
                         fc.setDefaultFileName("createMesh.rpl");
@@ -556,7 +567,11 @@ public class Optimization extends JFrame {
                 jLabelThi_3_0.setFont(new Font("楷体", Font.BOLD, 20));
                 JLabel jLabelThi_3_1 = new JLabel("选择计算结果存储文件夹：");
                 JTextField jTextFieldThi_3_1;
-                jTextFieldThi_3_1 = new JTextField(new File(workingDirectory, "solve").getAbsolutePath());
+                jTextFieldThi_3_1 = new JTextField(new File(data.getWorkingDirectory(), "solve").getAbsolutePath());
+                if (data.getSolveFolder() != null) {
+                    jTextFieldThi_3_1.setText(data.getSolveFolder().getAbsolutePath());
+                }
+                data.setSolveFolder(new File(jTextFieldThi_3_1.getText()));
 
                 JButton jButtonThi_3_10 = new JButton("打开");
 
@@ -568,6 +583,7 @@ public class Optimization extends JFrame {
                 JCheckBox useFluentMatHub = new JCheckBox("使用Fluent材料库");
                 JCheckBox useUserMatHub = new JCheckBox("使用用户定义材料库", true);
                 JCheckBox useNoMatHub = new JCheckBox("不使用任何材料库");
+
                 JPanel userDefinedMatHub = new JPanel(new GridLayout(1, 0));
 
                 JLabel userDefinedMatHubLabel = new JLabel("材料库名称：");
@@ -586,6 +602,17 @@ public class Optimization extends JFrame {
                 matCtrlPanel.add(matCtrl, BorderLayout.CENTER);
                 matCtrlPanel.add(userDefinedMatHub, BorderLayout.SOUTH);
 
+                if (OptimizationData.FluidType.FluentDataBase.equals(data.getFluidType())) {
+                    useFluentMatHub.setSelected(true);
+                } else if (OptimizationData.FluidType.UserDefinedDataBase.equals(data.getFluidType())) {
+                    useUserMatHub.setSelected(true);
+                    if (data.getMaterialDataBaseFile() != null) {
+                        userDefinedMatHubTextField.setText(data.getMaterialDataBaseFile().getAbsolutePath());
+                    }
+                } else if (OptimizationData.FluidType.SpecificProperties.equals(data.getFluidType())) {
+                    useNoMatHub.setSelected(true);
+                }
+
                 calControlPanel.add(matCtrlPanel);
 
                 JLabel jLabelThi_3_3 = new JLabel("计算设置文件编辑：");
@@ -593,6 +620,15 @@ public class Optimization extends JFrame {
                 JTextArea jTextAreaThi_3 = new JTextArea();
                 //jTextAreaFir_1.setFont(new Font("宋体",Font.BOLD,14));
                 JScrollPane jScrollPaneThi1 = new JScrollPane(jTextAreaThi_3);
+
+                if (data.getCreateSolveFile() != null) {
+                    jLabelThi_3_4.setText(data.getCreateSolveFile().getAbsolutePath());
+                    jTextAreaThi_3.setText("");
+                    String content[] = new FileOperate().readFromFileStringArray(data.getCreateSolveFile());
+                    for (String content1 : content) {
+                        jTextAreaThi_3.append(content1 + "\n");
+                    }
+                }
 
                 JButton jButtonThi_3_11 = new JButton("打开");
                 JButton jButtonThi_3_12 = new JButton("新建");
@@ -653,8 +689,18 @@ public class Optimization extends JFrame {
                     @Override
                     public void actionPerformed(ActionEvent e) {
                         data.setSolveFolder(new File(jTextFieldThi_3_1.getText()));
+                        if (useFluentMatHub.isSelected()) {
+                            data.setFluidType(OptimizationData.FluidType.FluentDataBase);
+                        } else if (useUserMatHub.isSelected()) {
+                            data.setFluidType(OptimizationData.FluidType.UserDefinedDataBase);
+                            data.setMaterialDataBaseFile(new File(userDefinedMatHubTextField.getText()));
+                        } else if (useNoMatHub.isSelected()) {
+                            data.setFluidType(OptimizationData.FluidType.SpecificProperties);
+                        }
                         data.setCreateSolveFile(new File(jLabelThi_3_4.getText()));
-
+                        String[] tempStr = jTextAreaThi_3.getText().split("\n");//将JTextArea中边界的文件保存
+                        FileOperate fo = new FileOperate(data.getCreateSolveFile());
+                        fo.writeToFileStrings(tempStr, false);
                     }
                 });
                 jButtonThi_3_2.addActionListener(new ActionListener() {
@@ -672,14 +718,14 @@ public class Optimization extends JFrame {
                 jButtonThi_3_12.addActionListener(new ActionListener() {//新建按钮
                     @Override
                     public void actionPerformed(ActionEvent e) {
-                        //模型创建脚本存放在工作目录中，不在模型存储文件夹中
-                        FileChooser fc = new FileChooser(FileChooser.NEW_FILE, workingDirectory.getAbsolutePath());
+                        //计算脚本存放在工作目录中，不在算例存储文件夹中
+                        FileChooser fc = new FileChooser(FileChooser.NEW_FILE, data.getWorkingDirectory().getAbsolutePath());
                         String fileFilter[] = {"jou", "py", "txt"};
                         fc.setFileType(fileFilter);
                         fc.setDefaultFileName("createSolve.jou");
-                        createSolveFile = fc.getFile();
-                        if (createSolveFile != null) {
-                            jLabelThi_3_4.setText(createSolveFile.getAbsolutePath());
+                        data.setCreateSolveFile(fc.getFile());
+                        if (data.getCreateSolveFile() != null) {
+                            jLabelThi_3_4.setText(data.getCreateSolveFile().getAbsolutePath());
                             //设置j
                             jTextAreaThi_3.setText("");
                         }
@@ -689,18 +735,18 @@ public class Optimization extends JFrame {
                     @Override
                     public void actionPerformed(ActionEvent e) {
                         //模型创建脚本存放在工作目录中，不在模型存储文件夹中
-                        FileChooser fc = new FileChooser(FileChooser.OPEN_FILE, workingDirectory.getAbsolutePath());
+                        FileChooser fc = new FileChooser(FileChooser.OPEN_FILE, data.getWorkingDirectory().getAbsolutePath());
                         String fileFilter[] = {"jou", "py", "txt"};
                         fc.setFileType(fileFilter);
                         fc.setDefaultFileName("createSolve.jou");
-                        createSolveFile = fc.getFile();
-                        if (createSolveFile != null) {
-                            jLabelThi_3_4.setText(createSolveFile.getAbsolutePath());
+                        data.setCreateSolveFile(fc.getFile());
+                        if (data.getCreateSolveFile() != null) {
+                            jLabelThi_3_4.setText(data.getCreateSolveFile().getAbsolutePath());
                             //设置jTextAreaFir_1
                             jTextAreaThi_3.setText("");
-                            String content[] = new FileOperate().readFromFileStringArray(createSolveFile);
-                            for (int i = 0; i < content.length; i++) {
-                                jTextAreaThi_3.append(content[i] + "\n");
+                            String content[] = new FileOperate().readFromFileStringArray(data.getCreateSolveFile());
+                            for (String content1 : content) {
+                                jTextAreaThi_3.append(content1 + "\n");
                             }
                         }
                     }
@@ -739,7 +785,7 @@ public class Optimization extends JFrame {
                 userDefinedMatHubButton.addActionListener(new ActionListener() {
                     @Override
                     public void actionPerformed(ActionEvent e) {
-                        FileChooser fc = new FileChooser(FileChooser.OPEN_FILE, workingDirectory.getAbsolutePath());
+                        FileChooser fc = new FileChooser(FileChooser.OPEN_FILE, data.getWorkingDirectory().getAbsolutePath());
                         data.setMaterialDataBaseFile(fc.getFile());
                         userDefinedMatHubTextField.setText(data.getMaterialDataBaseFile().getAbsolutePath());
                     }
@@ -766,9 +812,12 @@ public class Optimization extends JFrame {
                 JPanel editPanel4 = new JPanel(new GridBagLayout());
                 JLabel jLabelFor_4_0 = new JLabel("数据处理设置");
                 jLabelFor_4_0.setFont(new Font("楷体", Font.BOLD, 20));
-                JLabel jLabelFor_4_1 = new JLabel("选择数据处理结果保存文件夹：");
+                JLabel jLabelFor_4_1 = new JLabel("选择数据结果保存至文件：");
                 JTextField jTextFieldFor_4_1;
-                jTextFieldFor_4_1 = new JTextField(new File(workingDirectory, "result").getAbsolutePath());
+                jTextFieldFor_4_1 = new JTextField(new File(data.getWorkingDirectory(), "result\\result.csv").getAbsolutePath());
+                if (data.getResultFile() != null) {
+                    jTextFieldFor_4_1.setText(data.getResultFile().getAbsoluteFile().toString());
+                }
 
                 JButton jButtonFor_4_10 = new JButton("打开");
                 JLabel jLabelFor_4_2 = new JLabel("网格控制：");
@@ -779,11 +828,17 @@ public class Optimization extends JFrame {
                 caseTypeName[1] = (OptimizationData.OptimizationType.Diff_Mesh).toString();
                 caseTypeName[2] = (OptimizationData.OptimizationType.Diff_Solve).toString();
 
-                JCheckBox batSolveCheckBox = new JCheckBox("批量计算", false);
+                JCheckBox batSolveCheckBox = new JCheckBox("批量计算", data.isBatchSolve());
 
                 JComboBox caseTypeCombo = new JComboBox(caseTypeName);
-
-                JLabel jLabelFor_4_3 = new JLabel("网格划分文件编辑：");
+                if (data.getOptimizationType().equals(OptimizationData.OptimizationType.Diff_Model)) {
+                    caseTypeCombo.setSelectedItem(OptimizationData.OptimizationType.Diff_Model.toString());
+                } else if (data.getOptimizationType().equals(OptimizationData.OptimizationType.Diff_Mesh)) {
+                    caseTypeCombo.setSelectedItem(OptimizationData.OptimizationType.Diff_Mesh.toString());
+                } else if (data.getOptimizationType().equals(OptimizationData.OptimizationType.Diff_Solve)) {
+                    caseTypeCombo.setSelectedItem(OptimizationData.OptimizationType.Diff_Solve.toString());
+                }
+                JLabel jLabelFor_4_3 = new JLabel("数据处理文件编辑：");
                 JLabel jLabelFor_4_4 = new JLabel("");
                 JTextArea jTextAreaFor_4 = new JTextArea();
                 //jTextAreaFir_1.setFont(new Font("宋体",Font.BOLD,14));
@@ -850,33 +905,50 @@ public class Optimization extends JFrame {
                         changePanel(3, null);
                     }
                 });
-                jButtonFor_4_0.addActionListener(new ActionListener() {
+                jButtonFor_4_1.addActionListener(new ActionListener() {
                     @Override
                     public void actionPerformed(ActionEvent e) {
                         changePanel(3, null);
                     }
                 });
-                jButtonFor_4_1.addActionListener(new ActionListener() {
+                jButtonFor_4_0.addActionListener(new ActionListener() {
                     @Override
                     public void actionPerformed(ActionEvent e) {
                         //保存面板四中的数据
-                        data.setResultFolder(new File(jTextFieldFor_4_1.getText()));
-                        data.setDataProcessFile(dataProcessFile);
+                        data.setResultFile(new File(jTextFieldFor_4_1.getText()));
+                        data.setDataProcessFile(new File(jLabelFor_4_4.getText()));
                         data.setOptimizationType((String) caseTypeCombo.getSelectedItem());
                         data.setBatchSolve(batSolveCheckBox.isSelected());
                     }
                 });
+
+                jButtonFor_4_10.addActionListener(new ActionListener() {//结果文件保存至的打开按钮
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        //模型创建脚本存放在工作目录中，不在模型存储文件夹中
+                        FileChooser fc = new FileChooser(FileChooser.SAVE_TO_FILE, data.getWorkingDirectory().getAbsolutePath());
+                        String fileFilter[] = {"txt", "csv"};
+                        fc.setFileType(fileFilter);
+                        fc.setDefaultFileName("result.csv");
+                        data.setResultFile(fc.getFile());
+                        if (data.getResultFile() != null) {
+                            jLabelFor_4_1.setText(data.getResultFile().getAbsolutePath());
+
+                        }
+                    }
+                });
+
                 jButtonFor_4_12.addActionListener(new ActionListener() {//新建按钮
                     @Override
                     public void actionPerformed(ActionEvent e) {
                         //模型创建脚本存放在工作目录中，不在模型存储文件夹中
-                        FileChooser fc = new FileChooser(FileChooser.NEW_FILE, workingDirectory.getAbsolutePath());
+                        FileChooser fc = new FileChooser(FileChooser.NEW_FILE, data.getWorkingDirectory().getAbsolutePath());
                         String fileFilter[] = {"vbs", "py", "txt"};
                         fc.setFileType(fileFilter);
                         fc.setDefaultFileName("dataProcess.vbs");
-                        dataProcessFile = fc.getFile();
-                        if (dataProcessFile != null) {
-                            jLabelFor_4_4.setText(dataProcessFile.getAbsolutePath());
+                        data.setDataProcessFile(fc.getFile());
+                        if (data.getDataProcessFile() != null) {
+                            jLabelFor_4_4.setText(data.getDataProcessFile().getAbsolutePath());
                             //设置j
                             jTextAreaFor_4.setText("");
                         }
@@ -886,16 +958,16 @@ public class Optimization extends JFrame {
                     @Override
                     public void actionPerformed(ActionEvent e) {
                         //模型创建脚本存放在工作目录中，不在模型存储文件夹中
-                        FileChooser fc = new FileChooser(FileChooser.OPEN_FILE, workingDirectory.getAbsolutePath());
+                        FileChooser fc = new FileChooser(FileChooser.OPEN_FILE, data.getWorkingDirectory().getAbsolutePath());
                         String fileFilter[] = {"vbs", "py", "txt"};
                         fc.setFileType(fileFilter);
                         fc.setDefaultFileName("dataProcess.vbs");
-                        dataProcessFile = fc.getFile();
-                        if (dataProcessFile != null) {
-                            jLabelFor_4_4.setText(dataProcessFile.getAbsolutePath());
+                        data.setDataProcessFile(fc.getFile());
+                        if (data.getDataProcessFile() != null) {
+                            jLabelFor_4_4.setText(data.getDataProcessFile().getAbsolutePath());
                             //设置jTextAreaFir_1
                             jTextAreaFor_4.setText("");
-                            String content[] = new FileOperate().readFromFileStringArray(dataProcessFile);
+                            String content[] = new FileOperate().readFromFileStringArray(data.getDataProcessFile());
                             for (int i = 0; i < content.length; i++) {
                                 jTextAreaFor_4.append(content[i] + "\n");
                             }
@@ -1047,14 +1119,8 @@ public class Optimization extends JFrame {
      *
      * @param tab tab==1表示从模型开始初始化，tab==2表示从网格开始初始化，tab==3表示从计算开始初始化
      */
-    private void initSolve(int tab) {
-        if (tab == 1) {
-
-        } else if (tab == 2) {
-
-        } else if (tab == 3) {
-            data.checkData(3);//检测数据是否齐全
-        }
+    private boolean initSolve(int tab) {
+        return data.checkData(tab);
     }
 
     private void optimization(OptimizationData data) {
@@ -1063,8 +1129,9 @@ public class Optimization extends JFrame {
         } else if (data.getOptimizationType().equals(OptimizationData.OptimizationType.Diff_Mesh)) {
             initSolve(2);
         } else if (data.getOptimizationType().equals(OptimizationData.OptimizationType.Diff_Solve)) {
-            initSolve(3);
-            solve3(data);
+            if (initSolve(3)) {
+                solve3(data);
+            }
         }
     }
 
@@ -1074,21 +1141,16 @@ public class Optimization extends JFrame {
      * @param data
      */
     private void solve3(OptimizationData data) {
-        String caseName = "";
+
+        String meshName = "";
         if (data.isBatchSolve()) {//如果是批量求解，则直接从material.csv和boundaryConditions.csv中读取计算文件设置信息，并替换
             //首先获得所有网格文件
             ArrayList<File> meshFiles = data.getMeshFiles();
 
             for (File meshFile : meshFiles) {
-                caseName += meshFile.getName().replace(".msh", "");//将网格文件名去除后缀后追加到算例名之后
+
                 //生成jou文件，首先获得jou文件的范例文件
-                File solveFile = data.getCreateSolveFile();
-                //赋值求解范例文件到新的临时文件，暂命名为tempSolveFile
-                File tempSolveFile = new File("solve\\tempSolveFile.jou");
-                FileOperate.copy(solveFile, tempSolveFile);
-                //替换$meshFolder$
-                replaceStrInFile(tempSolveFile, "$meshFile$", meshFile.getAbsoluteFile().toString());
-                dealMatAndBCSets(data, tempSolveFile, caseName);
+                dealMatAndBCSets(data, meshFile);
 
             }
         }
@@ -1103,42 +1165,93 @@ public class Optimization extends JFrame {
 
     }
 
-    private void dealMatAndBCSets(OptimizationData data, File solveFile, String caseName) {
+    private void dealMatAndBCSets(OptimizationData data, File meshFile) {
         //读取material.csv文件
+        String meshName = meshFile.getName().replace(".msh", "");//将网格文件名去除后缀后追加到算例名之后,如AoCao
+        String meshMatName = "";//网格和材料命名，如AoCao_cmc100
+        String pureCaseName = "";//网格和材料和边界条件命名，如AoCao_cmc100_1
         FileOperate fo = new FileOperate();
-        String[] materials = fo.readFromFileStringArray(new File("materials.csv"));
-        String[] matProNames = materials[0].split(",");
-        for (int i = 1; i < materials.length; i++) {//针对每个材料创建一个求解文件
-            if (data.getFluidType().equals(OptimizationData.FluidType.UserDefinedDataBase)) {
-                String dataBaseName = data.getMaterialDataBaseFile().toString();
-                replaceStrInFile(solveFile, "$userDefinedDataBaseName$", dataBaseName);
-            }
-            String[] properties = materials[i].split(",");
-            int numOfMatProperties = properties.length;
-            for (int propertiesIndex = 0; propertiesIndex < numOfMatProperties; propertiesIndex++) {
-                if (propertiesIndex == 0) {
-                    caseName = caseName + "_" + properties[0];  //caseName加上材料名
-                }
-                replaceStrInFile(solveFile, "$" + matProNames[i] + "$", properties[propertiesIndex]);
-            }
-            String boundaryConditions[] = fo.readFromFileStringArray(new File("boundaryConditions.csv"));
-            String bCNames[] = boundaryConditions[0].split(",");
+        String[] materials = fo.readFromFileStringArray(data.getMaterialFile());
+        String[] matProNames = materials[0].split(",");//材料文件的title，存储了材料的各种属性值
+        int numOfMatProperties = matProNames.length;
+        String boundaryConditions[] = fo.readFromFileStringArray(data.getBoundaryConditionFile());
+        String bCNames[] = boundaryConditions[0].split(",");//边界条件文件的title，存储了各个边界条件存储的数值是什么，如heatFlux,flowrate等
+        int numOfBCLength = bCNames.length;//就是一个边界条件里面有多少变量需要设置
+        for (int i = 1; i < materials.length; i++) {//针对每个材料创建一个求解文件         
             //针对每种边界条件创建一种求解文件
-            int numOfBCLength = bCNames.length;//就是一个边界条件里面有多少变量需要设置
             for (int j = 1; j < boundaryConditions.length; j++) {
-                for (int bCIndex = 0; bCIndex < numOfBCLength; bCIndex++) {
+                //复制求解范例文件到新的临时文件，暂命名为"tempSolveFile.jou"    
+                File tempSolveFile = new File(data.getSolveFolder(), "tempSolveFile.jou");//创建tempSolveFile.jou对应的File对象
+                FileOperate.copy(data.getCreateSolveFile(), tempSolveFile);//将范例文件拷贝到求解保存文件夹并重命名为“tempSolveFile.jou"
 
+                //替换$meshFolder$
+                replaceStrInFile(tempSolveFile, "\\$meshFile\\$", meshFile.getAbsoluteFile().toString().replaceAll("\\\\", "/"));
+                if (data.getFluidType().equals(OptimizationData.FluidType.UserDefinedDataBase)) {
+                    String dataBaseName = data.getMaterialDataBaseFile().getAbsolutePath().replaceAll("\\\\", "/");
+                    replaceStrInFile(tempSolveFile, "\\$userDefinedDataBaseName\\$", dataBaseName);
+                }
+                String[] properties = materials[i].split(",");//第i种材料的各种属性数值
+
+                for (int propertiesIndex = 0; propertiesIndex < numOfMatProperties; propertiesIndex++) {
+                    if (propertiesIndex == 0) {
+                        meshMatName = meshName + "_" + properties[0];  //caseName加上材料名
+                    }
+                    replaceStrInFile(tempSolveFile, "\\$" + matProNames[propertiesIndex] + "\\$", properties[propertiesIndex]);
+                }
+
+                for (int bCIndex = 0; bCIndex < numOfBCLength; bCIndex++) {
                     String boundaryCondition[] = boundaryConditions[j].split(",");
                     if (bCIndex == 0) {
-                        caseName = caseName + "_" + boundaryCondition[0];//caseName加上边界条件名
+                        pureCaseName = meshMatName + "_" + boundaryCondition[0];//caseName加上边界条件名
                     }
-                    replaceStrInFile(solveFile, "$" + bCNames[bCIndex] + "$", boundaryCondition[bCIndex]);
+                    replaceStrInFile(tempSolveFile, "\\$" + bCNames[bCIndex] + "\\$", boundaryCondition[bCIndex]);
                 }
-                caseName = caseName + ".jou";
-                solveFile.renameTo(new File(data.getSolveFolder(), caseName));
+                String jouName = pureCaseName + ".jou";
+                String caseName = pureCaseName + ".cas";
+                File individualCaseStoreFileFolder = new File(data.getSolveFolder(), pureCaseName);
+                if (!individualCaseStoreFileFolder.exists()) {
+                    individualCaseStoreFileFolder.mkdir();
+                }
+                //替换全局变量
+                String containsFLUIDZONE[] = new FileOperate(meshFile).findString("FLUIDZONE");
+                String fluidName = "";
+                for (int tempIndex = 0; tempIndex < containsFLUIDZONE.length; tempIndex++) {
+                    if (containsFLUIDZONE[tempIndex].contains("fluid")) {
+                        fluidName = containsFLUIDZONE[tempIndex].split("[(]")[2];//截取第二个“(”到第三个“(”之间的字符串
+                        fluidName = fluidName.split("f")[0];//截取第一个字符“f”之前的字符串
+                        fluidName = fluidName.trim();
+                    }
+                }
+                fluidName = "fluid-" + fluidName + "-1";
+                replaceStrInFile(tempSolveFile, "\\$fluidNum\\$", fluidName);
+                replaceStrInFile(tempSolveFile, "\\$caseFile\\$", new File(data.getSolveFolder(), caseName).getAbsolutePath().replaceAll("\\\\", "/"));
+                replaceStrInFile(tempSolveFile, "\\$solveFolder\\$", data.getSolveFolder().getAbsolutePath().replaceAll("\\\\", "/"));
+                replaceStrInFile(tempSolveFile, "\\$pureCaseName\\$", pureCaseName);
+                if (new File(data.getSolveFolder(), jouName).exists()) {
+                    new File(data.getSolveFolder(), jouName).delete();
+                }
+                tempSolveFile.renameTo(new File(data.getSolveFolder(), jouName));
 
-                //调用Fluent运行
+                callFluent(data.getFluentPath(), new File(data.getSolveFolder(), jouName));
             }
+        }
+    }
+
+    private void callFluent(String fluent, File jouFile) {
+
+        try {
+            String command = "\"" + fluent + "\" 3d -t2 -wait -i %~dp0" + jouFile.getName();
+            //创建bat文件调用fluent，因为java直接调用Fluent的时候回停在Fluent Launcher界面
+            File batFile = new File(jouFile.getParent(), "tempSolve.bat");
+            batFile.createNewFile();
+            FileOperate fo = new FileOperate(batFile);
+            fo.writeToFileString(command, false);
+            fo.writeToFileString("\nexit", true);
+            Process process = Runtime.getRuntime().exec("cmd /c start /wait " + batFile);//最后一个设置fluent的工作目录
+            process.waitFor();
+            
+        } catch (Exception ex) {
+            Logger.getLogger(Optimization.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
 

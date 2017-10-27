@@ -7,6 +7,7 @@ package common;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Map;
 import javax.swing.JOptionPane;
 
 /**
@@ -14,6 +15,34 @@ import javax.swing.JOptionPane;
  * @author Administrator
  */
 public class OptimizationData {
+
+    /**
+     * @return the ansysPath
+     */
+    public String getAnsysPath() {
+        return ansysPath;
+    }
+
+    /**
+     * @param ansysPath the ansysPath to set
+     */
+    public void setAnsysPath(String ansysPath) {
+        this.ansysPath = ansysPath;
+    }
+
+    /**
+     * @return the fluentPath
+     */
+    public String getFluentPath() {
+        return fluentPath;
+    }
+
+    /**
+     * @param fluentPath the fluentPath to set
+     */
+    public void setFluentPath(String fluentPath) {
+        this.fluentPath = fluentPath;
+    }
 
     /**
      * @return the fluidType
@@ -103,11 +132,13 @@ public class OptimizationData {
         this.dataProcessFile = dataProcessFile;
     }
 
+    private File workingDirectory = new File("D:\\Users\\2017\\dissertation\\chapter3\\AoCao");
+
     private File modelFolder = null;
     private File meshFolder = null;
-    private File resultFolder = null;
+    private File resultFile = null;
     private File solveFolder = null;
-    private ArrayList<File> meshFiles = null;
+    private ArrayList<File> meshFiles;
     private String modelVar[] = null;//模型参数变量名
     private String modelDiscription[] = null;//对应的模型参数变量的值
     private String modelUnit[] = null;//对应的模型参数变量对应值的单位
@@ -115,10 +146,15 @@ public class OptimizationData {
     private File createMeshFile = null;
     private File createSolveFile = null;
     private File dataProcessFile = null;
-    private OptimizationType optimizationType = null;
-    private FluidType fluidType;
-    private File materialDataBaseFile=null;//当使用用户自定义材料库时，这个是库文件
+    private OptimizationType optimizationType = OptimizationType.Diff_Model;
+    private FluidType fluidType = null;
+    private File materialDataBaseFile = null;//当使用用户自定义材料库时，这个是库文件
+    private File materialFile = new File("materials.csv");//材料文件，里面定义了计算使用的材料有哪些
+    private File boundaryConditionFile = new File("boundaryConditions.csv");
     private boolean batchSolve = false;
+
+    private String ansysPath;
+    private String fluentPath;
 
     public enum FluidType {
         FluentDataBase, UserDefinedDataBase, SpecificProperties
@@ -129,33 +165,51 @@ public class OptimizationData {
     }
 
     public boolean checkModelData() {
-        boolean flag = true;
+        if (workingDirectory == null) {
+            JOptionPane.showMessageDialog(null, "未设置工作目录");
+            return false;
+        }
+
         if (modelFolder == null) {
-            flag = false;
             JOptionPane.showMessageDialog(null, "模型保存文件夹不能为空");
+            return false;
         }
-        if ((modelVar == null) || (modelUnit == null)) {
-            JOptionPane.showMessageDialog(null, "模型参数数据不全");
-            flag = false;
-        }
+
         if ((modelVar.length == modelUnit.length)) {
 
         } else {
             JOptionPane.showMessageDialog(null, "模型参数变量名个数和变量名单位个数不相同");
-            flag = false;
+            return false;
         }
 
         if (getCreateModelFile() == null) {
             JOptionPane.showMessageDialog(null, "没有建模文件");
+            return false;
         }
-        return flag;
+        return true;
+    }
+
+    public boolean checkMeshData() {
+        if (workingDirectory == null) {
+            JOptionPane.showMessageDialog(null, "未设置工作目录");
+            return false;
+        }
+        JOptionPane.showMessageDialog(null, "目前不支持变网格");
+        return false;
     }
 
     public boolean checkSolveData() {
+
+        if (workingDirectory == null) {
+            JOptionPane.showMessageDialog(null, "未设置工作目录");
+            return false;
+        }
+
         if (this.meshFolder == null) {
             JOptionPane.showMessageDialog(null, "未设置网格文件夹！");
             return false;
         } else {
+            meshFiles = new ArrayList<>();//meshFiles根据meshFolder初始化，首先清空
             File[] fileList = meshFolder.listFiles();
             for (File fileList1 : fileList) {
                 String name = fileList1.getName();
@@ -168,17 +222,87 @@ public class OptimizationData {
                 return false;
             }
         }
+        System.out.println("mesh folder = " + meshFolder);
+        System.out.println("total " + meshFiles.size() + " different mesh files");
+        for (int i = 0; i < meshFiles.size(); i++) {
+            System.out.println("\t" + meshFiles.get(i).getName());
+        }
+        if (batchSolve) {
+            System.out.println("计算模式：" + "batch solve");
+        } else {
+            System.out.println("计算模式：" + "Optimization");
+        }
+        if (null != this.optimizationType) {
+            switch (this.optimizationType) {
+                case Diff_Solve:
+                    System.out.println("计算考虑多个固定网格文件，变化材料和变化边界条件！");
+                    break;
+                case Diff_Mesh:
+                    System.out.println("计算考虑多个固定模型，变化网格参数，变化材料和变化边界条件");
+                    break;
+                case Diff_Model:
+                    System.out.println("计算考虑变化模型参数，变化网格文件，变化材料和变化边界条件");
+                    break;
+                default:
+                    break;
+            }
+        }
+        if (this.fluidType == FluidType.FluentDataBase) {
+            System.out.println("use Fluent material data base");
+        } else if (this.fluidType == FluidType.UserDefinedDataBase) {
+            System.out.println("use User-Defined data base");
+            System.out.println("\tUser-Defined data base name：" + this.materialDataBaseFile.getName());
+        } else if (this.fluidType == FluidType.SpecificProperties) {
+            System.out.println("use materials with specific properties");
+        }
+
+        if (this.createSolveFile == null) {
+            JOptionPane.showMessageDialog(null, "计算设置文件不存在！");
+            return false;
+        } else {
+            System.out.println("计算设置文件为：" + this.createSolveFile.getAbsolutePath());
+        }
+
         return true;
     }
 
     public boolean checkData(int tab) {
         if (tab == 1) {
-            checkModelData();
-            checkMeshData();
-            checkSolveData();
-        } else if (tab == 3) {
-            checkSolveData();
+            if (checkModelData()) {
+                if (checkMeshData()) {
+                    if (checkSolveData()) {
+                    } else {
+                        return false;
+                    }
+                } else {
+                    return false;
+                }
+            } else {
+                return false;
+            }
         }
+        if (tab == 2) {
+            if (checkMeshData()) {
+                if (checkSolveData()) {
+                } else {
+                    return false;
+                }
+            } else {
+                return false;
+            }
+
+        }
+        if (tab == 3) {
+            if (checkSolveData()) {
+
+            } else {
+                return false;
+            }
+        }
+        //调用Fluent运行
+        Map<String, String> map = System.getenv();
+        ansysPath = map.get("AWP_ROOT150");//Ansys的路径D:\Program Files\ANSYS Inc\v150
+        fluentPath = ansysPath + "\\fluent\\ntbin\\win64\\fluent.exe";
         return true;
     }
 
@@ -224,17 +348,17 @@ public class OptimizationData {
     }
 
     /**
-     * @return the resultFolder
+     * @return the resultFile
      */
-    public File getResultFolder() {
-        return resultFolder;
+    public File getResultFile() {
+        return resultFile;
     }
 
     /**
-     * @param resultFolder the resultFolder to set
+     * @param resultFile the resultFile to set
      */
-    public void setResultFolder(File resultFolder) {
-        this.resultFolder = resultFolder;
+    public void setResultFile(File resultFile) {
+        this.resultFile = resultFile;
     }
 
     /**
@@ -358,6 +482,48 @@ public class OptimizationData {
      */
     public void setMaterialDataBaseFile(File materialDataBaseFile) {
         this.materialDataBaseFile = materialDataBaseFile;
+    }
+
+    /**
+     * @return the workingDirectory
+     */
+    public File getWorkingDirectory() {
+        return workingDirectory;
+    }
+
+    /**
+     * @param workingDirectory the workingDirectory to set
+     */
+    public void setWorkingDirectory(File workingDirectory) {
+        this.workingDirectory = workingDirectory;
+    }
+
+    /**
+     * @return the materialFile
+     */
+    public File getMaterialFile() {
+        return materialFile;
+    }
+
+    /**
+     * @param materialFile the materialFile to set
+     */
+    public void setMaterialFile(File materialFile) {
+        this.materialFile = materialFile;
+    }
+
+    /**
+     * @return the boundaryConditionFile
+     */
+    public File getBoundaryConditionFile() {
+        return boundaryConditionFile;
+    }
+
+    /**
+     * @param boundaryConditionFile the boundaryConditionFile to set
+     */
+    public void setBoundaryConditionFile(File boundaryConditionFile) {
+        this.boundaryConditionFile = boundaryConditionFile;
     }
 
 }
